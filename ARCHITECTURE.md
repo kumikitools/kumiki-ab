@@ -39,6 +39,13 @@ contract everything else serves.
    Next, which paywalls it); (b) *infra-free* — runs on the user's own Cloudflare
    free tier for most sites; ~$5/mo of *their own* Cloudflare at high traffic,
    never a kumiki charge. See §6.
+5. **Install supports three tiers, GTM is first-class.** Direct in-`<head>`
+   one-liner is the zero-flicker default, but GTM install is explicitly
+   supported (most marketing teams have no dev-deploy access) and **conversions
+   integrate with GA4 via GTM** — fire `kumiki.track` from the user's existing
+   GA4 triggers so they reuse tagging they already have. The honest trade-off
+   (GTM async → flicker) is documented, with an anti-flicker stub as mitigation.
+   See §3.5.
 
 ---
 
@@ -137,13 +144,18 @@ conversion { ts, site_id, goal, visitor_id, value? }
 
 ### 3a. Delivery (public, cached) — the read hot path
 ```
-GET /v1/config/:siteId  →  KumikiConfig
+GET /v1/config/:siteId  →  KumikiConfig (JSON)
+GET /s.js?site=:siteId  →  snippet JS with config baked in (the install one-liner)
 ```
 - Flattens site→tests→variants into the exact `KumikiConfig` shape.
-- **CDN-cacheable** (`Cache-Control` + Cloudflare cache), purged on any config
-  write. Config changes rarely → ~99.9% cache hit → **reads don't burn the
-  Worker request budget** (key to staying free, §6). Inline config stays the
-  zero-flicker default; this fetch path is for dynamic delivery.
+- **`s.js` is the install endpoint:** returns the snippet with the site's config
+  **inlined** into the response. One request, synchronous assignment → **zero
+  flicker**, no separate config fetch. This is what the in-`<head>` one-liner
+  points at (§3.5).
+- Both are **CDN-cacheable** (`Cache-Control` + Cloudflare cache), purged on any
+  config write. Config changes rarely → ~99.9% cache hit → **reads don't burn
+  the Worker request budget** (key to staying free, §6). The raw `/config` JSON
+  remains for the `data-config-url` fetch path and programmatic use.
 
 ### 3b. Ingestion (public write) — the event hot path
 ```
@@ -175,6 +187,68 @@ deliberate, logged, reversible; `stop` is the instant kill switch; never touch
 checkout/payment selectors.
 
 Validation: zod mirroring `types.ts` — consider a shared `packages/schema`.
+
+---
+
+## 3.5 Onboarding & install (the user's first 10 minutes)
+
+Two setups, only one is a one-liner — be honest about both. GA4/Optimize Next are
+pure one-liners because *Google hosts the backend*; kumiki's backend is the
+**user's own** Cloudflare (the price of free + data sovereignty). We make that a
+one *command*, not zero.
+
+### Step 1 — Deploy backend (once, ~5 min)
+- **"Deploy to Cloudflare" button** from the repo → provisions Worker + D1 in the
+  user's account. Gold standard for self-host onboarding.
+- **`npm create kumiki@latest`** → scaffold + `wrangler deploy` (CLI/AI-builder fit).
+- **Agent-native (marquee):** "set up kumiki from Claude Code" — the MCP angle
+  turns deploy into a conversation. Lead marketing with this; it's the
+  differentiator.
+- Non-technical users are served by a *future optional hosted tier* (ladder §4),
+  not self-host. Don't contort the self-host flow for them.
+
+### Step 2 — Install snippet (three tiers)
+Output of step 1 gives the user their Worker origin + `SITE_ID`.
+
+1. **In-`<head>` one-liner — zero-flicker default (recommended):**
+   ```html
+   <script src="https://their-worker.workers.dev/s.js?site=SITE_ID"></script>
+   ```
+   `s.js` returns the snippet with config baked in (§3a) → synchronous → no FOOC.
+   Needs template/dev access.
+
+2. **GTM + anti-flicker stub — no dev deploy, near-zero flicker:**
+   - Tiny stub (~3 lines) placed in `<head>` hides `<body>` immediately.
+   - kumiki loaded as a GTM **Custom HTML tag** on *Initialization – All Pages*;
+     it reveals once variants apply (snippet's hard-timeout reveal is the
+     fail-open backstop).
+   - Still needs that one in-head stub line, but no full template deploy.
+
+3. **Pure GTM tag — acceptable, documented flicker:**
+   - kumiki as a Custom HTML tag, fired as early as possible. GTM loads async, so
+     the original can paint before the tag fires (FOOC). State this plainly; this
+     is the known weakness of GTM-based A/B (why VWO/Optimizely/old Optimize all
+     recommend in-head). Fine for low-risk/below-the-fold changes.
+
+### Step 3 — Mark conversions (the step self-collecting adds)
+We collect our own conversions (Decisions §1–2), so the user marks the goal.
+Easiest first:
+
+1. **Declarative goal — no code (default onboarding):** URL match (`/thank-you`),
+   click selector, or form submit. Configured on the test, zero site changes.
+2. **`kumiki.track('purchase', { value })`** — precise / server-confirmed /
+   revenue conversions.
+3. **GTM conversion tag — reuse existing GA4 triggers:** fire `kumiki.track` from
+   a GTM tag bound to the user's **existing GA4 purchase trigger**. Best combo:
+   in-head snippet for exposure (zero flicker) + GTM for conversion (reuses
+   tagging they already maintain). This is the "share settings/triggers with GA4"
+   path.
+
+### Why GTM is first-class, not an afterthought
+Most marketing teams own GTM but not the page template. GTM install + sharing
+GA4 triggers is how a real team adopts this without engineering tickets. We
+support it explicitly and document the flicker trade-off rather than pretending
+in-head is the only way.
 
 ---
 
@@ -276,14 +350,19 @@ sites; pennies on your own infra at scale; we never charge for a feature."*
 
 1. **`packages/schema`** — extract `KumikiConfig` + zod from `types.ts` (shared
    source of truth). Small; unblocks API + MCP.
-2. **`packages/api` — config:** D1 migrations + Hono control routes + CDN-cached
-   delivery route. Wire the snippet's `data-config-url` end-to-end.
+2. **`packages/api` — config + install:** D1 migrations + Hono control routes +
+   CDN-cached delivery route + the **`/s.js` served-snippet endpoint** (config
+   baked in). Wire the in-head one-liner end-to-end.
 3. **`packages/api` — ingestion + results:** event store, batched beacon
    endpoint, user-based windowed beta-binomial results route.
 4. **`packages/mcp`** — wrap the control API; verify every route has a tool.
 5. **`packages/dashboard`** — CRUD UI, then the iframe visual editor.
-6. **Dogfood on the storefront/a second storefront** — low-risk page, kill switch, fail-open verified;
-   enable a webhook/GA4 emit to sanity-check counts.
+6. **Onboarding artifacts** — Deploy-to-Cloudflare button + `npm create kumiki`
+   scaffold + the GTM install guide (in-head stub + Custom HTML tag + GA4-trigger
+   conversion tag).
+7. **Dogfood on the storefront/a second storefront** — low-risk page, kill switch, fail-open verified;
+   enable a webhook/GA4 emit to sanity-check counts. Try the GTM-shared-trigger
+   conversion path against the storefront's existing GA4 setup.
 
 Ship 1–4 to get the **agent-native loop working from Claude Code** (create test →
 snippet serves it → events collected → results read back) before the dashboard.
@@ -308,3 +387,7 @@ snippet serves it → events collected → results read back) before the dashboa
 7. the storefront/a second storefront CSP: can we allow framing for the iframe editor? (strategy §10 Q6)
 8. Sampling policy: at what volume to sample exposures, and how to correct the
    posterior for the sampling rate.
+9. GTM anti-flicker stub: ship a separate ~3-line in-head stub snippet for the
+   GTM install tier? (yes/no, and is it generated per-site or static.)
+10. Backend deploy UX: Deploy-to-Cloudflare button vs `npm create kumiki` vs
+    agent-driven — which is the *documented primary* for launch?
