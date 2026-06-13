@@ -1,0 +1,38 @@
+# Kumiki A/B
+
+**Agent-native A/B testing. Free, self-hosted, MCP-first.**
+
+Run experiments from Claude Code. Apply winning variants to 100% of traffic — no paywall, no SaaS bill.
+
+---
+
+## Why
+
+Every A/B tool charges you for the one thing that actually matters: **applying the winner**.
+
+VWO, Optimizely, and Optimize Next all gate "winning variant → 100% rollout" behind paid plans (¥100k+/mo). Kumiki A/B makes it free, self-hosted, and fully operable by an AI agent via MCP.
+
+## Hero features
+
+- **Win-pattern application — free.** Roll the winning variant to 100% of traffic with a single MCP call.
+- **MCP-first.** Every operation — create test, update traffic split, read results, apply winner — is callable from Claude Code. No dashboard required.
+- **Self-hosted on Cloudflare.** Your data stays in your own D1 database and Workers. Zero vendor lock-in.
+
+## Stack
+
+| Layer | Tech |
+|---|---|
+| Snippet | Lightweight JS (`<head>`) — anti-flicker, sticky bucketing, fail-open, GA4 exposure events |
+| API | Cloudflare Workers + Hono + D1 |
+| MCP server | Full REST coverage for Claude Code |
+| Dashboard | Next.js 15 + visual editor (iframe) |
+| Stats | Bayesian (beta-binomial) — peeking-resistant |
+| Analytics | GA4 Data API — no proprietary tracking |
+
+## Status
+
+Early development. Dogfooded on real e-commerce traffic.
+
+## License
+
+MIT
