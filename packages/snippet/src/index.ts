@@ -10,7 +10,7 @@
 // Everything is wrapped so a failure to even bootstrap reveals the page.
 import { run } from "./engine";
 import { hide, DEFAULT_TIMEOUT } from "./antiflicker";
-import type { KumikiConfig } from "./types";
+import type { KumikiConfig } from "@kumikitools/schema";
 
 interface KumikiWindow extends Window {
   KUMIKI_CONFIG?: KumikiConfig;

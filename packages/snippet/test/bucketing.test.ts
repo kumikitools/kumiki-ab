@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assignVariant, toUnitInterval } from "../src/bucketing";
-import type { Test } from "../src/types";
+import type { Test } from "@kumikitools/schema";
 
 const ab: Test = {
   id: "t1",

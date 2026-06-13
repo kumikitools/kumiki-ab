@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyChange, applyVariant } from "../src/apply";
-import type { Variant } from "../src/types";
+import type { Variant } from "@kumikitools/schema";
 
 beforeEach(() => {
   document.body.innerHTML = `

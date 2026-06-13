@@ -1,7 +1,7 @@
 // Page targeting. Pure functions over a URL string so they are trivially
 // testable and identical wherever they run. A test is active on a page when an
 // include matches (or there are none) and no exclude matches.
-import type { UrlPattern, UrlTargeting } from "./types";
+import type { UrlPattern, UrlTargeting } from "@kumikitools/schema";
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

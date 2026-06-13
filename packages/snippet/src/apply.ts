@@ -1,7 +1,7 @@
 // DOM mutation engine. Each Change is applied to every element matching its
 // selector. Individual change failures are swallowed so one bad selector can't
 // take down the rest of a variant (the engine layer adds page-level fail-open).
-import type { Change, Variant } from "./types";
+import type { Change, Variant } from "@kumikitools/schema";
 
 function applyOne(el: Element, change: Change): void {
   const { type, value } = change;

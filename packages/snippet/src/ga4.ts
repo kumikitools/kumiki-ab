@@ -2,7 +2,7 @@
 // on GA4). On each variant assignment we push an exposure event so the
 // experiment dimension is joinable against GA4 conversions for Bayesian
 // analysis downstream.
-import type { Ga4Config, Test, Variant } from "./types";
+import type { Ga4Config, Test, Variant } from "@kumikitools/schema";
 
 const DEFAULT_EVENT = "experiment_impression";
 

@@ -8,7 +8,7 @@ import { hide, DEFAULT_TIMEOUT } from "./antiflicker";
 import { sendExposure } from "./ga4";
 import { browserStorage, getVisitorId } from "./storage";
 import { matchesUrl } from "./urlmatch";
-import type { KumikiConfig } from "./types";
+import type { KumikiConfig } from "@kumikitools/schema";
 
 export interface Assignment {
   testId: string;

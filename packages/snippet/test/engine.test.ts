@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { run } from "../src/engine";
-import type { KumikiConfig } from "../src/types";
+import type { KumikiConfig } from "@kumikitools/schema";
 
 function hidingStyle(): HTMLElement | null {
   return document.getElementById("_kumiki_af");

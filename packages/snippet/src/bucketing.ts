@@ -1,7 +1,7 @@
 // Deterministic, sticky variant assignment. Pure functions only — no DOM, no
 // storage — so the same visitor always lands in the same variant regardless of
 // where/when this runs, and so it is trivially unit-testable.
-import type { Test, Variant } from "./types";
+import type { Test, Variant } from "@kumikitools/schema";
 
 /**
  * cyrb53 — a small, fast, well-distributed 53-bit string hash. We only need
