@@ -201,7 +201,9 @@ one *command*, not zero.
 ### Step 1 — Deploy backend (once, ~5 min)
 - **"Deploy to Cloudflare" button** from the repo → provisions Worker + D1 in the
   user's account. Gold standard for self-host onboarding.
-- **`npm create kumiki@latest`** → scaffold + `wrangler deploy` (CLI/AI-builder fit).
+- **`npm create kumiki@latest ab`** → scaffold + `wrangler deploy` (CLI/AI-builder
+  fit). Umbrella initializer + positional tool selector (`ab`); bare
+  `npm create kumiki` opens a picker. Scales to the series (`kumiki analytics`).
 - **Agent-native (marquee):** "set up kumiki from Claude Code" — the MCP angle
   turns deploy into a conversation. Lead marketing with this; it's the
   differentiator.
@@ -395,3 +397,9 @@ snippet serves it → events collected → results read back) before the dashboa
 10. ~~Backend deploy UX: primary method for launch?~~ → **`npm create kumiki` is
     the documented primary** (2026-06-14): puts the brand in the install command.
     Deploy-to-Cloudflare button + agent-native remain as secondary paths.
+    **Command shape (2026-06-14):** umbrella initializer `create-kumiki` with a
+    **positional tool selector** — `npm create kumiki@latest ab` — so it scales
+    to the series (`kumiki analytics`, …); bare `npm create kumiki` opens an
+    interactive picker. Not per-tool names (`create-kumiki-ab`), not a flag
+    (`--ab`). Mirrors Cloudflare's C3 umbrella pattern. `create-kumiki` reserved
+    on npm via a stub (`packages/create-kumiki`).

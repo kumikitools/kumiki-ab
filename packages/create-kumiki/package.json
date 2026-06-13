@@ -1,0 +1,32 @@
+{
+  "name": "create-kumiki",
+  "version": "0.0.1",
+  "description": "Scaffolder for Kumiki Tools — agent-native, free, self-hosted marketing/data tools. `npm create kumiki ab` for Kumiki A/B. (Name reserved; full scaffold in progress.)",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-kumiki": "index.mjs"
+  },
+  "files": [
+    "index.mjs"
+  ],
+  "keywords": [
+    "kumiki",
+    "kumiki-tools",
+    "ab-testing",
+    "cloudflare",
+    "workers",
+    "mcp",
+    "create",
+    "scaffold"
+  ],
+  "homepage": "https://github.com/kumikitools",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kumikitools/kumiki-ab.git",
+    "directory": "packages/create-kumiki"
+  },
+  "bugs": {
+    "url": "https://github.com/kumikitools/kumiki-ab/issues"
+  }
+}
