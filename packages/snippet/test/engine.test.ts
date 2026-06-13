@@ -79,4 +79,28 @@ describe("run", () => {
     expect(result.assignments).toEqual([]);
     expect(hidingStyle()).toBeNull();
   });
+
+  it("honors URL targeting (jsdom href = localhost)", () => {
+    const targeted: KumikiConfig = {
+      tests: [
+        {
+          id: "match",
+          status: "applied",
+          winner: "v1",
+          urlMatch: { include: [{ type: "contains", value: "localhost" }] },
+          variants: [{ id: "v1", weight: 1, changes: [{ selector: "#title", type: "text", value: "Y" }] }],
+        },
+        {
+          id: "nomatch",
+          status: "applied",
+          winner: "v1",
+          urlMatch: { include: [{ type: "contains", value: "/never-here/" }] },
+          variants: [{ id: "v1", weight: 1 }],
+        },
+      ],
+    };
+    const result = run(targeted, window, document);
+    expect(result.assignments).toEqual([{ testId: "match", variantId: "v1" }]);
+    expect(document.querySelector("#title")!.textContent).toBe("Y");
+  });
 });

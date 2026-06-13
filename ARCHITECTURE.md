@@ -56,9 +56,10 @@ object — the `KumikiConfig` the snippet consumes:
 
 ```
 KumikiConfig { tests: Test[], antiFlickerTimeout?, ga4? }
-  Test    { id, status: running|applied|stopped, coverage?, variants[], winner? }
+  Test    { id, status: running|applied|stopped, coverage?, variants[], winner?, urlMatch? }
   Variant { id, weight, changes?[] }
   Change  { selector, type, value }
+  UrlTargeting { include?: UrlPattern[], exclude?: UrlPattern[] }   // exact|prefix|contains|wildcard|regex
 ```
 
 - **Snippet** consumes it (done) and emits exposure/conversion events.
@@ -371,8 +372,10 @@ snippet serves it → events collected → results read back) before the dashboa
 
 ## 9. Open questions
 
-1. `url_match` / page-targeting in the snippet+config now or later? (contract
-   change — decide before §2 freezes.)
+1. ~~`url_match` / page-targeting now or later?~~ → **Done (2026-06-14):**
+   `urlMatch` (include/exclude × exact|prefix|contains|wildcard|regex) shipped in
+   the snippet (`urlmatch.ts`) and the `Test` schema. Engine gates tests by
+   `location.href`. Table-stakes for any A/B tool.
 2. **Event substrate: Workers Analytics Engine vs D1** for the event store.
    Analytics Engine is purpose-built for high-cardinality writes & cheap, but
    samples at scale and has limited retention; D1 gives exact SQL + retention but

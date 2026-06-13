@@ -32,6 +32,28 @@ export type TestStatus =
   | "applied" // winner rolled to 100% — the free hero feature
   | "stopped"; // do nothing, show original
 
+export type UrlMatchType =
+  | "exact" // href === value
+  | "prefix" // href starts with value
+  | "contains" // href includes value (substring)
+  | "wildcard" // value with * globs, e.g. "https://site.com/p/*"
+  | "regex"; // value compiled as a RegExp against href
+
+export interface UrlPattern {
+  type: UrlMatchType;
+  value: string;
+}
+
+/**
+ * Page targeting. A test runs on a URL when: (include is empty/omitted OR any
+ * include pattern matches) AND no exclude pattern matches. Matched against the
+ * full `location.href`.
+ */
+export interface UrlTargeting {
+  include?: UrlPattern[];
+  exclude?: UrlPattern[];
+}
+
 export interface Test {
   id: string;
   status: TestStatus;
@@ -40,6 +62,8 @@ export interface Test {
   variants: Variant[];
   /** When status === "applied", the variant served to everyone. */
   winner?: string;
+  /** Page targeting. Omitted ⇒ runs on every page. */
+  urlMatch?: UrlTargeting;
 }
 
 export interface Ga4Config {

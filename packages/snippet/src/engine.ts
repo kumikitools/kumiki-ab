@@ -7,6 +7,7 @@ import { applyVariant } from "./apply";
 import { hide, DEFAULT_TIMEOUT } from "./antiflicker";
 import { sendExposure } from "./ga4";
 import { browserStorage, getVisitorId } from "./storage";
+import { matchesUrl } from "./urlmatch";
 import type { KumikiConfig } from "./types";
 
 export interface Assignment {
@@ -34,7 +35,11 @@ export function run(config: KumikiConfig, win: Window, doc: Document): RunResult
     const visitorId = getVisitorId(store);
     result.visitorId = visitorId;
 
+    const url = win.location?.href ?? "";
+
     for (const test of config.tests ?? []) {
+      // Page targeting: skip tests that don't apply to this URL.
+      if (!matchesUrl(test.urlMatch, url)) continue;
       const variant = assignVariant(test, visitorId);
       if (!variant) continue;
       applyVariant(doc, variant);
