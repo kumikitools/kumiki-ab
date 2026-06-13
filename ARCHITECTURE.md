@@ -389,5 +389,6 @@ snippet serves it → events collected → results read back) before the dashboa
    posterior for the sampling rate.
 9. GTM anti-flicker stub: ship a separate ~3-line in-head stub snippet for the
    GTM install tier? (yes/no, and is it generated per-site or static.)
-10. Backend deploy UX: Deploy-to-Cloudflare button vs `npm create kumiki` vs
-    agent-driven — which is the *documented primary* for launch?
+10. ~~Backend deploy UX: primary method for launch?~~ → **`npm create kumiki` is
+    the documented primary** (2026-06-14): puts the brand in the install command.
+    Deploy-to-Cloudflare button + agent-native remain as secondary paths.
