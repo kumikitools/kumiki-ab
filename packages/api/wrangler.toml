@@ -1,0 +1,15 @@
+# Kumiki A/B API Worker — one Worker, three surfaces (delivery / ingestion /
+# control). See ARCHITECTURE.md §3. The control surface is also the MCP surface.
+name = "kumiki-api"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Config store (ARCH §2a) — normalised, low-volume, edited by humans/MCP.
+# `database_id` is a placeholder for local dev / tests; replace with the real id
+# from `wrangler d1 create kumiki` before `wrangler deploy`.
+[[d1_databases]]
+binding = "DB"
+database_name = "kumiki"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
