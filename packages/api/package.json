@@ -6,10 +6,15 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "embed-snippet": "node scripts/embed-snippet.mjs",
+    "prebuild": "npm run embed-snippet",
     "build": "tsc --noEmit",
+    "pretypecheck": "npm run embed-snippet",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run embed-snippet",
     "test": "vitest run",
     "test:watch": "vitest",
+    "predev": "npm run embed-snippet",
     "dev": "wrangler dev",
     "migrations:apply:local": "wrangler d1 migrations apply kumiki --local",
     "migrations:apply:remote": "wrangler d1 migrations apply kumiki --remote"

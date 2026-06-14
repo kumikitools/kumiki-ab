@@ -4,6 +4,7 @@ import { siteAuth } from "../auth";
 import { insertTestWithVariants, getTestWithVariants } from "../db";
 import { CreateTestRequestSchema, validateJson } from "../validation";
 import { serializeTest } from "../serialize";
+import { purgeSiteCache } from "../cache";
 
 /**
  * THE REFERENCE CONTROL ROUTE (A2). Every other control route (B1–B6) follows
@@ -46,6 +47,11 @@ tests.post("/:id/tests", siteAuth(), async (c) => {
   }));
 
   await insertTestWithVariants(c.env.DB, testRow, variantRows);
+
+  // Purge-on-write (ARCH §3a): this test now changes the site's delivered
+  // config, so drop the cached /v1/config + /s.js entries. Every write route
+  // (B1–B6) follows this — mutate, then purge.
+  await purgeSiteCache(site.id);
 
   // Read back through the same path the GET routes will use, so the create
   // response and a later fetch are byte-identical.

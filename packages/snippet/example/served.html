@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kumiki A/B — served snippet demo (/s.js)</title>
+
+    <!--
+      The zero-flicker in-<head> one-liner (ARCHITECTURE.md §3a/§3.5). Unlike
+      index.html (inline config), here the config is BAKED IN by the Worker:
+      /s.js returns `window.KUMIKI_CONFIG = {…}` followed by the snippet, so
+      assignment is still synchronous (no second fetch, no FOOC) but the config
+      is served and edge-cached, not hand-written.
+
+      To run it:
+        1. Start the API:   npm run dev -w @kumikitools/api   (→ :8787)
+        2. Create a site:   curl -X POST localhost:8787/v1/sites \
+                              -H 'content-type: application/json' -d '{"name":"Demo"}'
+           …note the returned `id` (SITE_ID) and `writeKey`.
+        3. Create a test that swaps #headline (use the writeKey as
+           `Authorization: Bearer …`) on POST /v1/sites/SITE_ID/tests.
+        4. Replace SITE_ID below, then open this file via the API origin, e.g.
+           http://localhost:8787/… or just point the src at the worker directly.
+
+      Reload a few times — the variant is sticky per visitor (localStorage
+      `_kumiki_vid`); clear it to re-roll.
+    -->
+    <script src="http://localhost:8787/s.js?site=SITE_ID"></script>
+  </head>
+  <body>
+    <h1 id="headline">Control headline</h1>
+    <a
+      id="cta"
+      href="/signup-a"
+      style="display:inline-block;padding:8px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px"
+      >Sign up</a
+    >
+
+    <p style="margin-top:2rem;color:#666">
+      Config here comes from the Worker's edge-cached <code>/s.js</code>, not an
+      inline <code>KUMIKI_CONFIG</code>. Editing the test via the control API
+      purges the cache, so a reload reflects the change.
+    </p>
+  </body>
+</html>

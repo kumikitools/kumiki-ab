@@ -83,3 +83,44 @@ export async function getTestWithVariants(
 
   return { test, variants: results };
 }
+
+/**
+ * Load every test of a site with its variants — the read for the delivery
+ * surface (A3, ARCH §3a), flattened into `KumikiConfig` by `serializeConfig`.
+ *
+ * Two queries (tests, then all their variants via a join) grouped in memory, so
+ * the whole site config is one round-trip pair regardless of test count. Tests
+ * are ordered deterministically (created_at, then id as a tiebreak); variants
+ * keep authoring `position` within each test.
+ */
+export async function getTestsWithVariantsForSite(
+  db: D1Database,
+  siteId: string,
+): Promise<{ test: TestRow; variants: VariantRow[] }[]> {
+  const { results: tests } = await db
+    .prepare(
+      "SELECT * FROM test WHERE site_id = ? ORDER BY created_at ASC, id ASC",
+    )
+    .bind(siteId)
+    .all<TestRow>();
+  if (tests.length === 0) return [];
+
+  const { results: variants } = await db
+    .prepare(
+      `SELECT v.* FROM variant v
+         JOIN test t ON v.test_id = t.id
+        WHERE t.site_id = ?
+        ORDER BY v.test_id ASC, v.position ASC`,
+    )
+    .bind(siteId)
+    .all<VariantRow>();
+
+  const byTest = new Map<string, VariantRow[]>();
+  for (const v of variants) {
+    const arr = byTest.get(v.test_id);
+    if (arr) arr.push(v);
+    else byTest.set(v.test_id, [v]);
+  }
+
+  return tests.map((test) => ({ test, variants: byTest.get(test.id) ?? [] }));
+}
