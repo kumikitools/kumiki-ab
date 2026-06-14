@@ -65,6 +65,74 @@ export async function insertTestWithVariants(
   await db.batch([testStmt, ...variantStmts]);
 }
 
+/** Load a single test row (no variants) — the read `testAuth` gates B2–B6 on. */
+export async function getTest(
+  db: D1Database,
+  testId: string,
+): Promise<TestRow | null> {
+  return db
+    .prepare("SELECT * FROM test WHERE id = ?")
+    .bind(testId)
+    .first<TestRow>();
+}
+
+/**
+ * Partial-update a test's mutable columns (B3 edit, B5 apply, B6 stop). `patch`
+ * is keyed by DB column — only the keys present are written, plus `updated_at`.
+ * The key set is a fixed `Pick`, so the dynamic `SET` clause can never carry
+ * caller-controlled column names (no injection surface).
+ */
+export async function updateTest(
+  db: D1Database,
+  testId: string,
+  patch: Partial<
+    Pick<
+      TestRow,
+      "name" | "status" | "coverage" | "winner" | "conversion_window_days" | "url_match"
+    >
+  >,
+  updatedAt: number,
+): Promise<void> {
+  const cols = Object.keys(patch) as (keyof typeof patch)[];
+  const sets = cols.map((col) => `${col} = ?`);
+  sets.push("updated_at = ?");
+  const values: (string | number | null)[] = cols.map((col) => patch[col] ?? null);
+  values.push(updatedAt, testId);
+
+  await db
+    .prepare(`UPDATE test SET ${sets.join(", ")} WHERE id = ?`)
+    .bind(...values)
+    .run();
+}
+
+/**
+ * Replace a test's entire variant set (B4 — the editor's save). Deletes the old
+ * variants, inserts the new ones at their authoring positions, and bumps the
+ * test's `updated_at`, all atomically in one D1 transaction.
+ */
+export async function replaceVariants(
+  db: D1Database,
+  testId: string,
+  variants: VariantRow[],
+  updatedAt: number,
+): Promise<void> {
+  const del = db.prepare("DELETE FROM variant WHERE test_id = ?").bind(testId);
+
+  const insertStmt = db.prepare(
+    `INSERT INTO variant (id, test_id, weight, changes, position)
+     VALUES (?, ?, ?, ?, ?)`,
+  );
+  const inserts = variants.map((v) =>
+    insertStmt.bind(v.id, v.test_id, v.weight, v.changes, v.position),
+  );
+
+  const bump = db
+    .prepare("UPDATE test SET updated_at = ? WHERE id = ?")
+    .bind(updatedAt, testId);
+
+  await db.batch([del, ...inserts, bump]);
+}
+
 /** Load a test with its variants ordered by authoring position. */
 export async function getTestWithVariants(
   db: D1Database,

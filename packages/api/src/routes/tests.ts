@@ -1,7 +1,11 @@
 import { Hono } from "hono";
 import type { AppBindings, TestRow, VariantRow } from "../env";
 import { siteAuth } from "../auth";
-import { insertTestWithVariants, getTestWithVariants } from "../db";
+import {
+  insertTestWithVariants,
+  getTestWithVariants,
+  getTestsWithVariantsForSite,
+} from "../db";
 import { CreateTestRequestSchema, validateJson } from "../validation";
 import { serializeTest } from "../serialize";
 import { purgeSiteCache } from "../cache";
@@ -62,4 +66,16 @@ tests.post("/:id/tests", siteAuth(), async (c) => {
   }
 
   return c.json(serializeTest(stored.test, stored.variants), 201);
+});
+
+/**
+ * `GET /v1/sites/:id/tests` (B1) — list every test of a site, each as the full
+ * control resource (contract `Test` + control fields). Same `siteAuth()` gate as
+ * create (here `:id` is the siteId). Reuses the delivery read helper, so a listed
+ * test and its delivered config are serialized from the same rows.
+ */
+tests.get("/:id/tests", siteAuth(), async (c) => {
+  const site = c.get("site");
+  const rows = await getTestsWithVariantsForSite(c.env.DB, site.id);
+  return c.json(rows.map(({ test, variants }) => serializeTest(test, variants)));
 });

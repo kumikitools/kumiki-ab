@@ -10,8 +10,10 @@ export interface Env {
 
 /** Hono context variables set by middleware (see auth.ts). */
 export interface Variables {
-  /** The authenticated site, set by `siteAuth` on control routes. */
+  /** The authenticated site, set by `siteAuth` (and `testAuth`) on control routes. */
   site: SiteRow;
+  /** The authenticated test, set by `testAuth` on test-scoped routes (B2–B6). */
+  test: TestRow;
 }
 
 /** A row of the `site` table. */

@@ -3,6 +3,7 @@ import type { AppBindings } from "./env";
 import { toErrorResponse } from "./errors";
 import { sites } from "./routes/sites";
 import { tests } from "./routes/tests";
+import { testById } from "./routes/test-by-id";
 import { delivery } from "./routes/delivery";
 
 /**
@@ -25,7 +26,8 @@ app.get("/healthz", (c) => c.json({ ok: true }));
 app.route("/", delivery);
 
 // Control surface (§3c).
-app.route("/v1/sites", sites); //            POST /v1/sites
-app.route("/v1/sites", tests); // POST /v1/sites/:id/tests
+app.route("/v1/sites", sites); //                       POST /v1/sites
+app.route("/v1/sites", tests); // POST/GET /v1/sites/:id/tests  (create B-/list B1)
+app.route("/v1/tests", testById); // GET/PATCH/PUT/POST /v1/tests/:id…  (B2–B6)
 
 export default app;

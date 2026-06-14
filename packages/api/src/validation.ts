@@ -55,6 +55,65 @@ export const CreateTestRequestSchema = z
 export type CreateTestRequest = z.infer<typeof CreateTestRequestSchema>;
 
 /**
+ * Body for `PATCH /v1/tests/:id` (B3). Every field is optional — a partial edit
+ * of the control-plane test (status / coverage / window / name / targeting). At
+ * least one field must be present, else the request is a no-op (400). `winner`
+ * is intentionally absent here: it's set by the deliberate `apply` route (B5),
+ * not a general edit.
+ */
+export const PatchTestRequestSchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    status: TestStatusSchema.optional(),
+    coverage: z.number().min(0).max(1).optional(),
+    conversionWindowDays: z.number().int().positive().optional(),
+    urlMatch: UrlTargetingSchema.optional(),
+  })
+  .superRefine((body, ctx) => {
+    if (Object.keys(body).length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "provide at least one field to update",
+      });
+    }
+  });
+
+export type PatchTestRequest = z.infer<typeof PatchTestRequestSchema>;
+
+/**
+ * Body for `PUT /v1/tests/:id/variants` (B4) — replace the whole variant set.
+ * Reuses the contract `VariantSchema` (so `changes[]` is validated by the single
+ * source of truth) and only adds the test-level invariant that ids are unique.
+ */
+export const ReplaceVariantsRequestSchema = z
+  .object({
+    variants: z.array(VariantSchema).min(1),
+  })
+  .superRefine((body, ctx) => {
+    const ids = body.variants.map((v) => v.id);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["variants"],
+        message: "variant ids must be unique within a test",
+      });
+    }
+  });
+
+export type ReplaceVariantsRequest = z.infer<typeof ReplaceVariantsRequestSchema>;
+
+/**
+ * Body for `POST /v1/tests/:id/apply` (B5). `winner` names the variant rolled to
+ * 100%. That it references a *real* variant of this test needs the DB, so the
+ * route checks it (404/400) after this shape check — not here.
+ */
+export const ApplyTestRequestSchema = z.object({
+  winner: z.string().min(1),
+});
+
+export type ApplyTestRequest = z.infer<typeof ApplyTestRequestSchema>;
+
+/**
  * Parse + validate a JSON request body against a zod schema. On any failure
  * throws an `ApiError` (400 `invalid_body`) carrying flattened zod issues in
  * `details`. Routes call this instead of touching `c.req.json()` directly.
