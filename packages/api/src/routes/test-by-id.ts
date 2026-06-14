@@ -3,15 +3,24 @@ import type { Context } from "hono";
 import type { AppBindings, TestRow, VariantRow } from "../env";
 import { testAuth } from "../auth";
 import { ApiError } from "../errors";
-import { getTestWithVariants, updateTest, replaceVariants } from "../db";
+import {
+  getTestWithVariants,
+  getTestResultCounts,
+  updateTest,
+  replaceVariants,
+} from "../db";
 import {
   PatchTestRequestSchema,
   ReplaceVariantsRequestSchema,
   ApplyTestRequestSchema,
   validateJson,
 } from "../validation";
-import { serializeTest } from "../serialize";
+import { serializeTest, serializeResults } from "../serialize";
+import { computePosteriors, type VariantCounts } from "../stats";
 import { purgeSiteCache } from "../cache";
+
+/** Days → ms, the unit the event store stamps `ts` in (epoch ms). */
+const MS_PER_DAY = 86_400_000;
 
 /**
  * Test-scoped control routes (B2–B6, ARCH §3c). Mounted under `/v1/tests`, so
@@ -39,6 +48,48 @@ async function readBack(c: Context<AppBindings>, testId: string) {
 testById.get("/:id", testAuth(), async (c) => {
   const test = c.get("test");
   return c.json(await readBack(c, test.id));
+});
+
+/**
+ * D2 `GET /v1/tests/:id/results` — the user-based, windowed beta-binomial summary
+ * (ARCH §4). The READ side that closes the agent-native loop: it reads the D1
+ * event store this test has been collecting into.
+ *
+ * Shape: load the test's variants (the universe to report, incl. zero-exposure
+ * arms), aggregate exposed/converted/revenue from the event store over the test's
+ * own `conversion_window_days` (`getTestResultCounts`), feed the counts to the
+ * pure posterior math (`computePosteriors`), and serialize to the `Results`
+ * contract. The route stays thin — SQL in db.ts, math in stats.ts, shape in
+ * serialize.ts.
+ */
+testById.get("/:id/results", testAuth(), async (c) => {
+  const test = c.get("test");
+  const stored = await getTestWithVariants(c.env.DB, test.id);
+  if (!stored) {
+    // Unreachable: testAuth proved the test exists.
+    throw new ApiError(404, "test_not_found", `No test with id '${test.id}'`);
+  }
+
+  const windowMs = test.conversion_window_days * MS_PER_DAY;
+  const rows = await getTestResultCounts(c.env.DB, test.id, test.site_id, windowMs);
+  const byVariant = new Map(rows.map((r) => [r.variant_id, r]));
+
+  // Report only the test's current variants; orphan exposure rows (variants since
+  // removed) are ignored. Include revenue only when the test tracked any, so the
+  // optional revPerVisitor field is present on all variants or none.
+  const hasRevenue = rows.some((r) => r.revenue_visitors > 0);
+  const counts: VariantCounts[] = stored.variants.map((v) => {
+    const row = byVariant.get(v.id);
+    return {
+      id: v.id,
+      exposed: row?.exposed ?? 0,
+      converted: row?.converted ?? 0,
+      ...(hasRevenue ? { revenue: row?.revenue ?? 0 } : {}),
+    };
+  });
+
+  const posterior = computePosteriors(counts);
+  return c.json(serializeResults(test.id, test.conversion_window_days, posterior));
 });
 
 /** B3 `PATCH /v1/tests/:id` — partial edit of status / coverage / window / name / targeting. */

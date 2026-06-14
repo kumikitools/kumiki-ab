@@ -160,6 +160,61 @@ export const EventBatchSchema = z.object({
 });
 
 // ───────────────────────────────────────────────────────────────────────────
+// The results contract — the THIRD source of truth, alongside KumikiConfig and
+// the event/beacon shape above.
+//
+// This is the wire shape of the user-based, windowed Bayesian results (ARCH §4):
+// produced by the API's `GET /v1/tests/:id/results` and consumed by the MCP
+// `kumiki_get_results` tool and the dashboard. Like the other two contracts it
+// lives here once so producer and consumers can never drift.
+//
+// Naming note: ARCH §4 sketches the shape with a snake_case `window_days`, but
+// every wire contract in this package is camelCase (`conversionWindowDays`,
+// `visitorId`, …) — so the field is `windowDays` here, consistent with the rest.
+//
+// The numbers (ARCH §4): per variant V in the test,
+//   - exposed   = distinct visitors whose FIRST exposure in this test was to V
+//   - converted = those who then converted within W days of their own exposure
+//                 (post-exposure only)
+//   - rate      = converted / exposed (0 when exposed is 0)
+//   - pBest     = P(V is the best variant), Monte-Carlo over the beta-binomial
+//                 posteriors Beta(α₀+X, β₀+(N−X)); pBest sums to ~1 across V
+//   - ci95      = 95% credible interval on `rate`, as [lo, hi]
+//   - revPerVisitor = expected revenue per exposed visitor; present only when the
+//                 test has any conversion-value (revenue) signal
+
+/** Per-variant results row (ARCH §4). Counts are integers; the rest are in [0,1]. */
+export const VariantResultSchema = z.object({
+  id: z.string(),
+  /** Distinct visitors first-exposed to this variant (the sticky bucket). */
+  exposed: z.number().int().nonnegative(),
+  /** Exposed visitors who converted within the window, post-exposure. */
+  converted: z.number().int().nonnegative(),
+  /** converted / exposed; 0 when exposed is 0. */
+  rate: z.number(),
+  /** P(this variant is best), Monte-Carlo over posteriors. Sums to ~1 across variants. */
+  pBest: z.number(),
+  /** 95% credible interval on `rate`, as [lo, hi]. */
+  ci95: z.tuple([z.number(), z.number()]),
+  /** Expected revenue per exposed visitor. Present only when revenue was tracked. */
+  revPerVisitor: z.number().optional(),
+});
+
+/**
+ * The results summary for one test (ARCH §4 output shape). `winner` is the
+ * posterior-decisive leader (a variant whose `pBest` clears the decision
+ * threshold), distinct from the config `Test.winner` an operator *applied*.
+ */
+export const ResultsSchema = z.object({
+  testId: z.string(),
+  /** W — the conversion window the counts were computed against, in days. */
+  windowDays: z.number().int().positive(),
+  variants: z.array(VariantResultSchema),
+  /** The variant the posterior calls best, if any clears the threshold. */
+  winner: z.string().optional(),
+});
+
+// ───────────────────────────────────────────────────────────────────────────
 
 // Inferred types — import these (type-only) everywhere. Never hand-maintain.
 export type ChangeType = z.infer<typeof ChangeTypeSchema>;
@@ -172,6 +227,8 @@ export type UrlTargeting = z.infer<typeof UrlTargetingSchema>;
 export type Test = z.infer<typeof TestSchema>;
 export type Ga4Config = z.infer<typeof Ga4ConfigSchema>;
 export type KumikiConfig = z.infer<typeof KumikiConfigSchema>;
+export type VariantResult = z.infer<typeof VariantResultSchema>;
+export type Results = z.infer<typeof ResultsSchema>;
 export type ExposureEvent = z.infer<typeof ExposureEventSchema>;
 export type ConversionEvent = z.infer<typeof ConversionEventSchema>;
 export type KumikiEvent = z.infer<typeof KumikiEventSchema>;

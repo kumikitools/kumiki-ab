@@ -262,3 +262,82 @@ export async function insertEvents(
 
   if (stmts.length > 0) await db.batch(stmts);
 }
+
+/** Per-variant aggregate the results route (D2, §4) reads — one row per variant
+ *  that has at least one exposure (variants with zero exposures are absent; the
+ *  route fills them in from the test's variant list). */
+export interface VariantCountsRow {
+  variant_id: string;
+  exposed: number;
+  converted: number;
+  /** Sum of qualifying conversion `value`s (revenue) across this variant. */
+  revenue: number;
+  /** Count of exposed visitors with ≥1 revenue-bearing qualifying conversion. */
+  revenue_visitors: number;
+}
+
+/**
+ * Compute the windowed beta-binomial inputs for a test (ARCHITECTURE.md §4), in
+ * ONE query that does exactly the two conceptual reads the event store is indexed
+ * for (`0002_events.sql`):
+ *
+ *   1. **First-exposure assignment** (`first_exp` CTE) — for each visitor, the
+ *      earliest exposure in this test fixes the sticky variant. `ROW_NUMBER` over
+ *      `idx_exposure_test_visitor (test_id, visitor_id, ts)` makes this an ordered
+ *      range scan; a re-exposure (same visitor, later ts) is dropped, so it never
+ *      double-counts. The `variant_id` tiebreak makes a same-ts tie deterministic.
+ *   2. **Windowed conversion join** (`per_visitor` CTE) — each exposed visitor is
+ *      LEFT-JOINed to their own conversions via `idx_conversion_visitor
+ *      (site_id, visitor_id, ts)`, keeping only conversions in
+ *      `[exp_ts, exp_ts + windowMs]` (post-exposure, within W days). Collapsing
+ *      per visitor first means multiple conversions count the visitor once.
+ *
+ * The outer aggregate then rolls visitors up to variants. Conversions are
+ * variant-agnostic and matched purely by the visitor's own window (§2b/§4); goal
+ * is not filtered at MVP (any conversion counts — per-test goal binding is D3).
+ */
+export async function getTestResultCounts(
+  db: D1Database,
+  testId: string,
+  siteId: string,
+  windowMs: number,
+): Promise<VariantCountsRow[]> {
+  const { results } = await db
+    .prepare(
+      `WITH first_exp AS (
+         SELECT visitor_id, variant_id, exp_ts FROM (
+           SELECT visitor_id, variant_id, ts AS exp_ts,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY visitor_id ORDER BY ts ASC, variant_id ASC
+                  ) AS rn
+             FROM exposure
+            WHERE test_id = ?1
+         )
+         WHERE rn = 1
+       ),
+       per_visitor AS (
+         SELECT fe.variant_id AS variant_id,
+                CASE WHEN COUNT(c.ts) > 0 THEN 1 ELSE 0 END AS converted,
+                COALESCE(SUM(c.value), 0) AS revenue,
+                CASE WHEN COUNT(c.value) > 0 THEN 1 ELSE 0 END AS has_revenue
+           FROM first_exp fe
+           LEFT JOIN conversion c
+             ON c.site_id = ?2
+            AND c.visitor_id = fe.visitor_id
+            AND c.ts >= fe.exp_ts
+            AND c.ts <= fe.exp_ts + ?3
+          GROUP BY fe.visitor_id, fe.variant_id
+       )
+       SELECT variant_id,
+              COUNT(*)              AS exposed,
+              SUM(converted)        AS converted,
+              SUM(revenue)          AS revenue,
+              SUM(has_revenue)      AS revenue_visitors
+         FROM per_visitor
+        GROUP BY variant_id`,
+    )
+    .bind(testId, siteId, windowMs)
+    .all<VariantCountsRow>();
+
+  return results;
+}

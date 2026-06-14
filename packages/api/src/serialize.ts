@@ -1,10 +1,13 @@
 import type {
   Change,
   KumikiConfig,
+  Results,
   Test,
   UrlTargeting,
+  VariantResult,
 } from "@kumikitools/schema";
 import type { TestRow, VariantRow } from "./env";
+import type { PosteriorResult } from "./stats";
 
 /**
  * The API's test resource: the delivered-config `Test` shape (ARCH §0) plus the
@@ -78,4 +81,37 @@ export function serializeConfig(
   items: { test: TestRow; variants: VariantRow[] }[],
 ): KumikiConfig {
   return { tests: items.map(({ test, variants }) => toContractTest(test, variants)) };
+}
+
+/**
+ * Turn the computed posteriors (`stats.computePosteriors`) into the `Results`
+ * wire contract (ARCH §4). The single place that shapes the results response, so
+ * the API producer and the MCP/dashboard consumers agree by construction — the
+ * same role `serializeConfig`/`serializeTest` play for the config surface.
+ *
+ * `revPerVisitor` is carried through per-variant only when revenue was tracked
+ * (the posterior leaves it undefined otherwise), matching the optional field in
+ * `VariantResultSchema`.
+ */
+export function serializeResults(
+  testId: string,
+  windowDays: number,
+  posterior: PosteriorResult,
+): Results {
+  const variants: VariantResult[] = posterior.variants.map((v) => ({
+    id: v.id,
+    exposed: v.exposed,
+    converted: v.converted,
+    rate: v.rate,
+    pBest: v.pBest,
+    ci95: v.ci95,
+    ...(v.revPerVisitor === undefined ? {} : { revPerVisitor: v.revPerVisitor }),
+  }));
+
+  return {
+    testId,
+    windowDays,
+    variants,
+    ...(posterior.winner === undefined ? {} : { winner: posterior.winner }),
+  };
 }
