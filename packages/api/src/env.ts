@@ -47,6 +47,26 @@ export interface VariantRow {
   position: number;
 }
 
+/** A row of the `exposure` event-store table (§2b). */
+export interface ExposureRow {
+  site_id: string;
+  idempotency_key: string;
+  test_id: string;
+  variant_id: string;
+  visitor_id: string;
+  ts: number;
+}
+
+/** A row of the `conversion` event-store table (§2b). `value` is optional revenue. */
+export interface ConversionRow {
+  site_id: string;
+  idempotency_key: string;
+  goal: string;
+  visitor_id: string;
+  ts: number;
+  value: number | null;
+}
+
 /** The Hono generics every route/middleware in this package is typed against. */
 export interface AppBindings {
   Bindings: Env;

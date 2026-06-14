@@ -1,4 +1,10 @@
-import type { SiteRow, TestRow, VariantRow } from "./env";
+import type {
+  ConversionRow,
+  ExposureRow,
+  SiteRow,
+  TestRow,
+  VariantRow,
+} from "./env";
 
 /**
  * D1 access helper — the ONE place that knows table/column names and SQL. Reference
@@ -191,4 +197,68 @@ export async function getTestsWithVariantsForSite(
   }
 
   return tests.map((test) => ({ test, variants: byTest.get(test.id) ?? [] }));
+}
+
+/**
+ * Append a beacon's events to the event store (D1, ARCH §2b/§3b) — the ingestion
+ * write helper, the equivalent of the control writes above but for the hot,
+ * public write path.
+ *
+ * `INSERT OR IGNORE` is the idempotency dedup (§3b): a row whose
+ * (site_id, idempotency_key) already exists is silently skipped, so a retried
+ * beacon — or a key repeated within one batch — never double-counts. All
+ * statements run in one `db.batch` transaction.
+ *
+ * Callers MUST treat a thrown error as fail-open (drop the events, return 2xx —
+ * never block the page; the free-tier write ceiling errors hard, ARCH §6). This
+ * helper does not swallow errors; the ingestion route owns that policy.
+ */
+export async function insertEvents(
+  db: D1Database,
+  exposures: ExposureRow[],
+  conversions: ConversionRow[],
+): Promise<void> {
+  const stmts: D1PreparedStatement[] = [];
+
+  if (exposures.length > 0) {
+    const exposure = db.prepare(
+      `INSERT OR IGNORE INTO exposure
+         (site_id, idempotency_key, test_id, variant_id, visitor_id, ts)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    for (const r of exposures) {
+      stmts.push(
+        exposure.bind(
+          r.site_id,
+          r.idempotency_key,
+          r.test_id,
+          r.variant_id,
+          r.visitor_id,
+          r.ts,
+        ),
+      );
+    }
+  }
+
+  if (conversions.length > 0) {
+    const conversion = db.prepare(
+      `INSERT OR IGNORE INTO conversion
+         (site_id, idempotency_key, goal, visitor_id, ts, value)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    for (const r of conversions) {
+      stmts.push(
+        conversion.bind(
+          r.site_id,
+          r.idempotency_key,
+          r.goal,
+          r.visitor_id,
+          r.ts,
+          r.value,
+        ),
+      );
+    }
+  }
+
+  if (stmts.length > 0) await db.batch(stmts);
 }

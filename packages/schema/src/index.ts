@@ -91,6 +91,76 @@ export const KumikiConfigSchema = z.object({
   ga4: Ga4ConfigSchema.optional(),
 });
 
+// ───────────────────────────────────────────────────────────────────────────
+// The event/beacon contract — the SECOND source of truth, alongside KumikiConfig.
+//
+// This is the wire shape of the self-collected events (ARCH §2b/§3b): emitted by
+// the snippet's beacon (D3) and received by the ingestion API (D1). Like
+// KumikiConfig, it lives here once so emitter and receiver can never drift —
+// the snippet imports the TYPES (zod stays out of its bundle), the API imports
+// the runtime validators.
+//
+// Scope guardrail (Decisions §3): only what the user-based, windowed results
+// model (§4) needs — an exposure (who saw which variant) and a conversion
+// (who converted, optionally with revenue). Conversions are deliberately
+// variant-agnostic; the variant is assigned at read time by first-exposure +
+// window join (§2b/§4). If a third dimension creeps in here, stop.
+
+/** Event-store field bounds — bound abuse without rejecting legitimate ids. */
+const idField = z.string().min(1).max(128);
+/** Client idempotency key — dedups retried beacons (ARCH §3b). Opaque, per-event. */
+const idempotencyKey = z.string().min(1).max(200);
+/** Client event time, epoch ms. The clock the window join (§4) is computed on. */
+const eventTs = z.number().int().nonnegative();
+
+/**
+ * An exposure: a `visitorId` was assigned `variantId` of `testId`. First exposure
+ * per (test, visitor) is the sticky bucket the results model assigns on (§4).
+ */
+export const ExposureEventSchema = z.object({
+  type: z.literal("exposure"),
+  key: idempotencyKey,
+  ts: eventTs,
+  /** Opaque visitor/bucket id — the snippet's own sticky id, not PII (§3b). */
+  visitorId: idField,
+  testId: idField,
+  variantId: idField,
+});
+
+/**
+ * A conversion: a `visitorId` hit `goal` (optionally worth `value`). NOT tagged
+ * with a variant — one conversion serves every concurrent test; the credit is
+ * resolved at read time against the visitor's first exposure + window (§2b/§4).
+ */
+export const ConversionEventSchema = z.object({
+  type: z.literal("conversion"),
+  key: idempotencyKey,
+  ts: eventTs,
+  visitorId: idField,
+  goal: idField,
+  /** Optional revenue value for expected-revenue results (§4). */
+  value: z.number().optional(),
+});
+
+/** One event in a beacon batch — discriminated on `type`. */
+export const KumikiEventSchema = z.discriminatedUnion("type", [
+  ExposureEventSchema,
+  ConversionEventSchema,
+]);
+
+/** Max events a single beacon may carry — the MVP per-request write guard (§3b). */
+export const MAX_EVENTS_PER_BATCH = 100;
+
+/**
+ * The beacon body for `POST /v1/e/:siteId` — client-batched events (§3b). `siteId`
+ * is NOT repeated per event; the ingestion route stamps it from the path.
+ */
+export const EventBatchSchema = z.object({
+  events: z.array(KumikiEventSchema).min(1).max(MAX_EVENTS_PER_BATCH),
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+
 // Inferred types — import these (type-only) everywhere. Never hand-maintain.
 export type ChangeType = z.infer<typeof ChangeTypeSchema>;
 export type Change = z.infer<typeof ChangeSchema>;
@@ -102,3 +172,7 @@ export type UrlTargeting = z.infer<typeof UrlTargetingSchema>;
 export type Test = z.infer<typeof TestSchema>;
 export type Ga4Config = z.infer<typeof Ga4ConfigSchema>;
 export type KumikiConfig = z.infer<typeof KumikiConfigSchema>;
+export type ExposureEvent = z.infer<typeof ExposureEventSchema>;
+export type ConversionEvent = z.infer<typeof ConversionEventSchema>;
+export type KumikiEvent = z.infer<typeof KumikiEventSchema>;
+export type EventBatch = z.infer<typeof EventBatchSchema>;
