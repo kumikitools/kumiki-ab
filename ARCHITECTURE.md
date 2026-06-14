@@ -317,24 +317,33 @@ Two frees (Decisions §4):
 don't monetise data.
 
 **Infra-free (user's own Cloudflare):** free-tier limits and the binding
-constraint (current to knowledge — verify, Cloudflare shifts these):
+constraint (**verified 2026-06-14** against CF docs — D1 / AE / Workers pricing):
 
 | Operation | Free limit | Mitigation |
 |---|---|---|
 | Config read / pageview | ~unlimited | **CDN-cache** → bypasses Worker budget |
 | Worker requests | 100k/day | only cache-misses + event writes count |
-| Event writes (D1) / data points (Analytics Engine) | ~100k/day | **batch** beacons; **sample** exposures at high volume |
+| Event writes — D1 | **100k rows written/day** (hard error at limit) | **batch** beacons; fail-open ingestion; sample exposures at high volume |
+| Event writes — Analytics Engine | **100k data points/day** (samples at limit) | same; AE degrades instead of erroring |
 | Dashboard (Pages) | 100k SSR/day, unlimited static | non-issue |
 
-→ Pure free tier covers **~100k experiment-exposed pageviews/day**. The write
-path is the ceiling (reads are cached). Stretch it with: CDN-cached config,
-client-batched exposures, denominator sampling above some volume (keep all
-conversions).
+→ Pure free tier covers **~60–80k experiment-exposed pageviews/day**, not 100k:
+the 100k/day write limit is shared by **exposures + conversions** (one row each),
+so conversions eat into the exposure budget. The write path is the ceiling (reads
+are cached). Stretch it with: CDN-cached config, client-batched exposures,
+denominator sampling above some volume (keep all conversions).
+
+> ⚠️ **D1 fails hard at the write ceiling** (writes are *rejected*, not queued) —
+> so ingestion **must fail-open** (drop the event, never block the page), which
+> matches the snippet's existing fail-open design. AE instead *samples* at its
+> ceiling (graceful degradation). This is a point in AE's favour at scale, not at
+> MVP (see §9.2).
 
 **Honest asterisk:** sustained very-high traffic pushes the user onto Cloudflare
-**Workers Paid ($5/mo, 10M req)** — *their* infra bill, not a kumiki gate, and
-~20× cheaper than VWO/Optimizely (¥100k+/mo). For the storefront/a second storefront dogfood: $0–$5,
-negligible. Positioning line: *"runs free on Cloudflare's free tier for most
+**Workers Paid ($5/mo min, 10M req/mo)** — *their* infra bill, not a kumiki gate,
+and ~20× cheaper than VWO/Optimizely (¥100k+/mo). Paid write overage is cheap:
+**D1 $1.00/M rows** (50M/mo included), **AE $0.25/M data points** (10M/mo
+included). For the storefront/a second storefront dogfood: $0–$5, negligible. Positioning line: *"runs free on Cloudflare's free tier for most
 sites; pennies on your own infra at scale; we never charge for a feature."*
 
 ---
@@ -378,11 +387,19 @@ snippet serves it → events collected → results read back) before the dashboa
    `urlMatch` (include/exclude × exact|prefix|contains|wildcard|regex) shipped in
    the snippet (`urlmatch.ts`) and the `Test` schema. Engine gates tests by
    `location.href`. Table-stakes for any A/B tool.
-2. **Event substrate: Workers Analytics Engine vs D1** for the event store.
-   Analytics Engine is purpose-built for high-cardinality writes & cheap, but
-   samples at scale and has limited retention; D1 gives exact SQL + retention but
-   tighter write limits. Likely: Analytics Engine for raw stream + D1 for rolled
-   up results. Resolve before §3b/§4 build.
+2. ~~**Event substrate: Workers Analytics Engine vs D1** for the event store.~~
+   → **Resolved (2026-06-14): D1-only for the MVP; AE-hybrid only at scale.**
+   Verified free ceilings are **identical — 100k writes/day either way** (D1 rows
+   written; AE data points), so AE buys *zero* free-tier headroom at MVP. The
+   results model (§4) *requires* D1's exact per-visitor SQL (first-exposure
+   assignment + windowed conversion join); AE samples, which biases `pBest`
+   exactly when samples are small (early in a test). AE's only real edges are at
+   paid scale ($0.25/M vs D1 $1.00/M writes) and graceful sampling vs D1's hard
+   errors at the ceiling — neither matters while dogfooding the storefront/a second storefront at low
+   volume. **Decision rule:** start D1-only (ingestion fails open at the ceiling,
+   per §6); **trigger to add AE-raw + D1-rollups = a real site approaching
+   ~80k writes/day**, at which point sampling correction (§9.8) becomes a
+   *prerequisite* of the switch, not a follow-up. Unblocks §3b/§4 (D1, D2).
 3. Conversion-instrumentation API surface: JS `kumiki.track(goal, {value})` +
    declarative goals (URL match / click selector / form submit)? Which for MVP?
 4. Default conversion window W (7d e-commerce default?) and whether per-test
