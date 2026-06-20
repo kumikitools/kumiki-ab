@@ -418,5 +418,6 @@ snippet serves it → events collected → results read back) before the dashboa
     **positional tool selector** — `npm create kumiki@latest ab` — so it scales
     to the series (`kumiki analytics`, …); bare `npm create kumiki` opens an
     interactive picker. Not per-tool names (`create-kumiki-ab`), not a flag
-    (`--ab`). Mirrors Cloudflare's C3 umbrella pattern. `create-kumiki` reserved
-    on npm via a stub (`packages/create-kumiki`).
+    (`--ab`). Mirrors Cloudflare's C3 umbrella pattern. `create-kumiki@0.1.0`
+    ships the real scaffolder with `@clack/prompts` picker, checked-in `templates/ab/`,
+    and a smoke test (wrangler dry-run + vitest run, no auth).

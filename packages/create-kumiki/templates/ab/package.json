@@ -1,0 +1,28 @@
+{
+  "name": "kumiki-ab",
+  "version": "0.1.0",
+  "description": "Kumiki A/B — agent-native A/B testing on Cloudflare Workers + D1.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "wrangler dev",
+    "migrations:apply:local": "wrangler d1 migrations apply kumiki --local",
+    "migrations:apply:remote": "wrangler d1 migrations apply kumiki --remote"
+  },
+  "dependencies": {
+    "@kumikitools/schema": "^0.1.0",
+    "hono": "^4.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.71",
+    "@cloudflare/workers-types": "^4.20250906.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.35.0"
+  }
+}
