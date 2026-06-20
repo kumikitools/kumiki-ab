@@ -4,7 +4,7 @@
 // a hung script can never leave the page invisible: that is the fail-open
 // contract — when in doubt, show the page.
 
-const STYLE_ID = "_kumiki_af";
+export const STYLE_ID = "_kumiki_af";
 const DEFAULT_TIMEOUT = 4000;
 
 export interface AntiFlicker {
