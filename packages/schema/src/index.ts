@@ -84,11 +84,66 @@ export const Ga4ConfigSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
+// ───────────────────────────────────────────────────────────────────────────
+// Goal contract (D3) — site-level conversion goals that the snippet evaluates
+// and fires as conversion beacons. Goals are variant-agnostic; credit is
+// resolved at read time via first-exposure + window join (§4).
+
+export const UrlGoalSchema = z.object({
+  id: z.string(),
+  type: z.literal("url"),
+  /** URL targeting — same shape as test page targeting; conversion fires on match. */
+  targeting: UrlTargetingSchema,
+  /** Optional static revenue value for expected-revenue results (§4). */
+  value: z.number().optional(),
+});
+
+export const ClickGoalSchema = z.object({
+  id: z.string(),
+  type: z.literal("click"),
+  /** CSS selector: conversion fires when any matching element is clicked. */
+  selector: z.string(),
+  value: z.number().optional(),
+});
+
+export const FormGoalSchema = z.object({
+  id: z.string(),
+  type: z.literal("form"),
+  /** CSS selector: conversion fires on submit of a form matching this selector. */
+  selector: z.string(),
+  value: z.number().optional(),
+});
+
+/** Site-level conversion goal — discriminated on `type`. */
+export const GoalSchema = z.discriminatedUnion("type", [
+  UrlGoalSchema,
+  ClickGoalSchema,
+  FormGoalSchema,
+]);
+
 export const KumikiConfigSchema = z.object({
   tests: z.array(TestSchema),
   /** Max ms to keep content hidden before failing open and revealing. */
   antiFlickerTimeout: z.number().optional(),
   ga4: Ga4ConfigSchema.optional(),
+  /**
+   * Site-level conversion goals (D3). The snippet evaluates these and emits
+   * conversion beacons to `ingestUrl`. Omitted when the config is delivered
+   * without goal authoring (pre-D3 clients treat absent field as no goals).
+   */
+  goals: z.array(GoalSchema).optional(),
+  /**
+   * The site identifier, carried in the config so the snippet can address the
+   * beacon endpoint without knowing the request origin. Required when `ingestUrl`
+   * is present. Omitted from manually-authored inline configs.
+   */
+  siteId: z.string().optional(),
+  /**
+   * The origin the snippet should POST beacons to (e.g. "https://api.kumiki.com").
+   * Derived from the delivery request origin and baked in by the API. The snippet
+   * appends `/v1/e/:siteId`. Omitted from inline configs without a known origin.
+   */
+  ingestUrl: z.string().optional(),
 });
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -233,3 +288,4 @@ export type ExposureEvent = z.infer<typeof ExposureEventSchema>;
 export type ConversionEvent = z.infer<typeof ConversionEventSchema>;
 export type KumikiEvent = z.infer<typeof KumikiEventSchema>;
 export type EventBatch = z.infer<typeof EventBatchSchema>;
+export type Goal = z.infer<typeof GoalSchema>;

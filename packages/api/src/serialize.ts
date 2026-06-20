@@ -74,13 +74,17 @@ export function serializeTest(
  * `status`, and the snippet honours running/applied/stopped — the kill switch
  * (B6) works by flipping status + purging cache, not by filtering here.
  *
- * `antiFlickerTimeout`/`ga4` are optional and not yet per-site columns, so the
- * MVP config is `{ tests }`; both stay omitted until they have a home in §2a.
+ * When `meta` is provided (D3+) the config self-describes for the beacon:
+ * `siteId` + `ingestUrl` let the snippet address POST /v1/e/:siteId without
+ * knowing the request origin; `goals` is [] until goal authoring lands (TASK-21).
  */
 export function serializeConfig(
   items: { test: TestRow; variants: VariantRow[] }[],
+  meta?: { siteId: string; ingestUrl: string },
 ): KumikiConfig {
-  return { tests: items.map(({ test, variants }) => toContractTest(test, variants)) };
+  const tests = items.map(({ test, variants }) => toContractTest(test, variants));
+  if (!meta) return { tests };
+  return { tests, siteId: meta.siteId, ingestUrl: meta.ingestUrl, goals: [] };
 }
 
 /**

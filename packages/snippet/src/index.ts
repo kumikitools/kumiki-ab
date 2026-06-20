@@ -10,11 +10,15 @@
 // Everything is wrapped so a failure to even bootstrap reveals the page.
 import { run } from "./engine";
 import { hide, DEFAULT_TIMEOUT } from "./antiflicker";
+import { createBeacon } from "./beacon";
+import { initGoals } from "./goals";
 import type { KumikiConfig } from "@kumikitools/schema";
+
+type TrackFn = (goal: string, opts?: { value?: number }) => void;
 
 interface KumikiWindow extends Window {
   KUMIKI_CONFIG?: KumikiConfig;
-  KUMIKI?: { run: typeof run };
+  KUMIKI?: { run: typeof run; track?: TrackFn };
 }
 
 function currentScript(doc: Document): HTMLScriptElement | null {
@@ -24,13 +28,25 @@ function currentScript(doc: Document): HTMLScriptElement | null {
   return byAttr ?? null;
 }
 
+function wireBeacon(cfg: KumikiConfig, win: KumikiWindow, doc: Document): void {
+  if (!cfg.siteId || !cfg.ingestUrl) return;
+  const beacon = createBeacon(win, cfg.siteId, cfg.ingestUrl);
+  const result = run(cfg, win, doc, beacon);
+  if (cfg.goals?.length) initGoals(cfg.goals, result.visitorId, beacon, win, doc);
+  win.KUMIKI!.track = (goal, opts) => beacon.enqueueConversion(goal, result.visitorId, opts);
+}
+
 function bootstrap(win: KumikiWindow, doc: Document): void {
   // Expose the engine for programmatic use / debugging.
   win.KUMIKI = { run };
 
   const inline = win.KUMIKI_CONFIG;
   if (inline && Array.isArray(inline.tests)) {
-    run(inline, win, doc);
+    if (inline.siteId && inline.ingestUrl) {
+      wireBeacon(inline, win, doc);
+    } else {
+      run(inline, win, doc);
+    }
     return;
   }
 
@@ -46,7 +62,11 @@ function bootstrap(win: KumikiWindow, doc: Document): void {
       .fetch(url, { credentials: "omit" })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((cfg: KumikiConfig) => {
-        run(cfg, win, doc); // run() reveals; idempotent hide is harmless.
+        if (cfg.siteId && cfg.ingestUrl) {
+          wireBeacon(cfg, win, doc);
+        } else {
+          run(cfg, win, doc);
+        }
         af.reveal();
       })
       .catch(() => af.reveal()); // Fail-open on any network/parse error.

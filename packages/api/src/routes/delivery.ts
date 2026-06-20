@@ -28,13 +28,13 @@ import { SNIPPET_JS } from "../snippet-asset";
 export const delivery = new Hono<AppBindings>();
 
 /** Build the site's `KumikiConfig`, or throw 404 if the site doesn't exist. */
-async function loadConfig(db: D1Database, siteId: string) {
+async function loadConfig(db: D1Database, siteId: string, ingestUrl: string) {
   const site = await getSite(db, siteId);
   if (!site) {
     throw new ApiError(404, "site_not_found", `No site with id '${siteId}'`);
   }
   const rows = await getTestsWithVariantsForSite(db, siteId);
-  return serializeConfig(rows);
+  return serializeConfig(rows, { siteId, ingestUrl });
 }
 
 /** Re-tag a (possibly cached) response with the hit/miss marker on the way out. */
@@ -51,7 +51,8 @@ delivery.get("/v1/config/:siteId", async (c) => {
   const cached = await cacheMatch(key);
   if (cached) return tagged(cached, "hit");
 
-  const config = await loadConfig(c.env.DB, siteId);
+  const ingestUrl = new URL(c.req.url).origin;
+  const config = await loadConfig(c.env.DB, siteId, ingestUrl);
   const res = new Response(JSON.stringify(config), {
     headers: {
       "content-type": "application/json; charset=utf-8",
@@ -76,7 +77,8 @@ delivery.get("/s.js", async (c) => {
   const cached = await cacheMatch(key);
   if (cached) return tagged(cached, "hit");
 
-  const config = await loadConfig(c.env.DB, siteId);
+  const ingestUrl = new URL(c.req.url).origin;
+  const config = await loadConfig(c.env.DB, siteId, ingestUrl);
   // Inline the config before the snippet IIFE. The snippet reads
   // window.KUMIKI_CONFIG synchronously (no second fetch) → variants apply before
   // first paint. JSON.stringify is a safe JS literal in an application/javascript

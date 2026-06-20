@@ -9,6 +9,7 @@ import { sendExposure } from "./ga4";
 import { browserStorage, getVisitorId } from "./storage";
 import { matchesUrl } from "./urlmatch";
 import type { KumikiConfig } from "@kumikitools/schema";
+import type { Beacon } from "./beacon";
 
 export interface Assignment {
   testId: string;
@@ -22,9 +23,11 @@ export interface RunResult {
 
 /**
  * Run all tests for this page view. `win`/`doc` are injected so the engine is
- * unit-testable under jsdom without touching real globals.
+ * unit-testable under jsdom without touching real globals. When `beacon` is
+ * provided, each assigned variant also emits a self-collected exposure event
+ * alongside the GA4 event (D3).
  */
-export function run(config: KumikiConfig, win: Window, doc: Document): RunResult {
+export function run(config: KumikiConfig, win: Window, doc: Document, beacon?: Beacon): RunResult {
   const result: RunResult = { visitorId: "", assignments: [] };
 
   // Hide immediately, before any assignment work, to prevent FOOC.
@@ -44,6 +47,7 @@ export function run(config: KumikiConfig, win: Window, doc: Document): RunResult
       if (!variant) continue;
       applyVariant(doc, variant);
       sendExposure(win, test, variant, config.ga4);
+      beacon?.enqueueExposure(test.id, variant.id, visitorId);
       result.assignments.push({ testId: test.id, variantId: variant.id });
     }
   } catch {
