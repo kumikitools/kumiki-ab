@@ -26,6 +26,8 @@ export interface SiteRow {
   webhook_secret: string | null;
   webhook_enabled: number;  // SQLite INTEGER: 0 = disabled, 1 = enabled
   webhook_events: string;   // "all" | "conversions"
+  /** Raw JSON `Goal[]` text. Added by migration 0004_goals.sql. */
+  goals: string;
 }
 
 /** A row of the `webhook_delivery` outbox table (migration 0003). */

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  GoalSchema,
   TestStatusSchema,
   UrlTargetingSchema,
   VariantSchema,
@@ -160,6 +161,28 @@ export const SetWebhookRequestSchema = z.object({
 });
 
 export type SetWebhookRequest = z.infer<typeof SetWebhookRequestSchema>;
+
+/**
+ * Body for `PUT /v1/sites/:id/goals` (TASK-21) — replace the whole goal set.
+ * Reuses `GoalSchema` from `@kumikitools/schema` (never re-declare the contract).
+ * Only adds the site-level invariant that goal ids are unique.
+ */
+export const SetGoalsRequestSchema = z
+  .object({
+    goals: z.array(GoalSchema),
+  })
+  .superRefine((body, ctx) => {
+    const ids = body.goals.map((g) => g.id);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["goals"],
+        message: "goal ids must be unique within a site",
+      });
+    }
+  });
+
+export type SetGoalsRequest = z.infer<typeof SetGoalsRequestSchema>;
 
 /**
  * Parse + validate a JSON request body against a zod schema. On any failure

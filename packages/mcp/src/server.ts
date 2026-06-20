@@ -11,6 +11,8 @@ import { registerStopTest } from "./tools/stop-test.js";
 import { registerCreateSite } from "./tools/create-site.js";
 import { registerGetResults } from "./tools/get-results.js";
 import { registerSetWebhook } from "./tools/set-webhook.js";
+import { registerGetGoals } from "./tools/get-goals.js";
+import { registerSetGoals } from "./tools/set-goals.js";
 
 /**
  * Assemble the Kumiki A/B MCP server: one `ApiClient` (env-configured), then one
@@ -38,6 +40,8 @@ export function createServer(config: KumikiMcpConfig): McpServer {
   registerCreateSite(server, client); // C7 — POST /v1/sites (unauthed bootstrap).
   registerGetResults(server, client); // C8 — GET /v1/tests/:id/results (READ).
   registerSetWebhook(server, client); // C9 — PUT /v1/sites/:id/webhook (D4).
+  registerGetGoals(server, client); // C10 — GET /v1/sites/:id/goals (TASK-21).
+  registerSetGoals(server, client); // C11 — PUT /v1/sites/:id/goals (TASK-21).
 
   return server;
 }
