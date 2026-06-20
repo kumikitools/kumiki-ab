@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { run } from "../src/engine";
+import { createBeacon } from "../src/beacon";
 import type { KumikiConfig } from "@kumikitools/schema";
 
 function hidingStyle(): HTMLElement | null {
@@ -78,6 +79,26 @@ describe("run", () => {
     const result = run(stopped, window, document);
     expect(result.assignments).toEqual([]);
     expect(hidingStyle()).toBeNull();
+  });
+
+  it("emits a self-collected exposure beacon alongside GA4 when beacon is provided", () => {
+    const calls: Array<{ url: string; body: unknown }> = [];
+    const send = (u: string, b: string) => calls.push({ url: u, body: JSON.parse(b) });
+    const beacon = createBeacon(window, "site1", "https://api.kumiki.com", send);
+
+    run(config, window, document, beacon);
+    beacon.flush();
+
+    expect(calls).toHaveLength(1);
+    const { events } = calls[0].body as { events: Array<{ type: string; testId: string; variantId: string }> };
+    const exposure = events.find((e) => e.type === "exposure");
+    expect(exposure).toBeDefined();
+    expect(exposure!.testId).toBe("t1");
+    expect(exposure!.variantId).toBe("v1");
+  });
+
+  it("run() without beacon does not throw (backward compat)", () => {
+    expect(() => run(config, window, document)).not.toThrow();
   });
 
   it("honors URL targeting (jsdom href = localhost)", () => {

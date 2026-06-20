@@ -69,7 +69,7 @@ describe("GET /v1/config/:siteId", () => {
     expect(config.tests).toHaveLength(1);
     const test = config.tests[0];
 
-    // Exactly the contract Test — no siteId/name/conversionWindowDays/timestamps.
+    // Exactly the contract Test — no name/conversionWindowDays/timestamps.
     expect(test).toEqual({
       id: "hero",
       status: "running",
@@ -80,16 +80,24 @@ describe("GET /v1/config/:siteId", () => {
         { id: "v1", weight: 1, changes: [{ selector: "#h", type: "text", value: "B" }] },
       ],
     });
-    expect(test).not.toHaveProperty("siteId");
     expect(test).not.toHaveProperty("name");
     expect(test).not.toHaveProperty("conversionWindowDays");
     expect(test).not.toHaveProperty("createdAt");
+
+    // Top-level config now includes D3 self-description fields.
+    expect(config.siteId).toBe(SITE_ID);
+    expect(typeof (config as { ingestUrl?: string }).ingestUrl).toBe("string");
+    expect((config as { goals?: unknown[] }).goals).toEqual([]);
   });
 
-  it("returns { tests: [] } for a site with no tests", async () => {
+  it("returns an empty-tests config for a site with no tests", async () => {
     const res = await get(`/v1/config/${SITE_ID}`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ tests: [] });
+    const config = (await res.json()) as { tests: unknown[]; siteId: string; ingestUrl: string; goals: unknown[] };
+    expect(config.tests).toEqual([]);
+    expect(config.siteId).toBe(SITE_ID);
+    expect(typeof config.ingestUrl).toBe("string");
+    expect(config.goals).toEqual([]);
   });
 
   it("preserves test creation order and variant position", async () => {
@@ -161,9 +169,15 @@ describe("GET /s.js?site=:siteId", () => {
     expect(config.tests[0].id).toBe("hero");
   });
 
-  it("serves an empty-config snippet for a site with no tests", async () => {
+  it("serves an empty-tests snippet for a site with no tests", async () => {
     const body = await (await get(`/s.js?site=${SITE_ID}`)).text();
-    expect(body).toContain("window.KUMIKI_CONFIG={\"tests\":[]};");
+    // Config includes siteId/ingestUrl/goals now; just check the prefix + shape.
+    expect(body).toMatch(/^window\.KUMIKI_CONFIG=/);
+    const json = body.slice("window.KUMIKI_CONFIG=".length, body.indexOf(";\n"));
+    const config = JSON.parse(json) as { tests: unknown[]; siteId: string; goals: unknown[] };
+    expect(config.tests).toEqual([]);
+    expect(config.siteId).toBe(SITE_ID);
+    expect(config.goals).toEqual([]);
     expect(body.endsWith(SNIPPET_JS)).toBe(true);
   });
 
