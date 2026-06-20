@@ -1,15 +1,25 @@
 {
   "name": "create-kumiki",
-  "version": "0.0.1",
-  "description": "Scaffolder for Kumiki Tools — agent-native, free, self-hosted marketing/data tools. `npm create kumiki ab` for Kumiki A/B. (Name reserved; full scaffold in progress.)",
+  "version": "0.1.0",
+  "description": "Scaffolder for Kumiki Tools — agent-native, free, self-hosted marketing/data tools. `npm create kumiki ab` for Kumiki A/B.",
   "license": "MIT",
   "type": "module",
+  "scripts": {
+    "test": "node test/smoke.mjs"
+  },
   "bin": {
     "create-kumiki": "index.mjs"
   },
   "files": [
-    "index.mjs"
+    "index.mjs",
+    "templates"
   ],
+  "dependencies": {
+    "@clack/prompts": "^0.9.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "kumiki",
     "kumiki-tools",

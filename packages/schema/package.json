@@ -1,6 +1,6 @@
 {
   "name": "@kumikitools/schema",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Kumiki A/B config contract — the single source of truth (zod schemas + inferred types) shared by the snippet, API, and MCP server.",
   "license": "MIT",
   "type": "module",
