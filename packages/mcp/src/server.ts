@@ -10,6 +10,7 @@ import { registerApplyWinner } from "./tools/apply-winner.js";
 import { registerStopTest } from "./tools/stop-test.js";
 import { registerCreateSite } from "./tools/create-site.js";
 import { registerGetResults } from "./tools/get-results.js";
+import { registerSetWebhook } from "./tools/set-webhook.js";
 
 /**
  * Assemble the Kumiki A/B MCP server: one `ApiClient` (env-configured), then one
@@ -36,6 +37,7 @@ export function createServer(config: KumikiMcpConfig): McpServer {
   registerStopTest(server, client); // C6 — POST /v1/tests/:id/stop (kill switch).
   registerCreateSite(server, client); // C7 — POST /v1/sites (unauthed bootstrap).
   registerGetResults(server, client); // C8 — GET /v1/tests/:id/results (READ).
+  registerSetWebhook(server, client); // C9 — PUT /v1/sites/:id/webhook (D4).
 
   return server;
 }

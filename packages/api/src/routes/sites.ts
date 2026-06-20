@@ -25,6 +25,10 @@ sites.post("/", async (c) => {
     name: body.name,
     api_key_hash: await sha256Hex(writeKey),
     created_at: Date.now(),
+    webhook_url: null,
+    webhook_secret: null,
+    webhook_enabled: 0,
+    webhook_events: "all",
   };
 
   await insertSite(c.env.DB, site);
