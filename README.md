@@ -4,6 +4,21 @@
 
 Run experiments from Claude Code. Apply winning variants to 100% of traffic — no paywall, no SaaS bill.
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kumikitools/kumiki-ab/tree/main/packages/api)
+
+## Quickstart
+
+```bash
+# 1. Deploy your backend
+npm create kumiki@latest ab
+# Follow printed steps: wrangler d1 create → paste id → migrations apply → wrangler deploy
+
+# 2. Add the snippet to your site's <head>
+# <script src="https://<your-worker>.workers.dev/s.js?site=SITE_ID"></script>
+```
+
+→ [Full install guide](docs/install.md) — CLI, Deploy-to-Cloudflare button, agent-native, and GTM (3-tier).
+
 ---
 
 ## Why
