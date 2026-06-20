@@ -33,24 +33,32 @@ wrangler deploy
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kumikitools/kumiki-ab/tree/main/packages/api)
 
 One click provisions the Worker + D1 in your Cloudflare account. Cloudflare reads
-`packages/api/wrangler.toml`, which already declares the `DB` D1 binding and the
-`kumiki` database name. You will be prompted to supply the `database_id` during setup.
+`packages/api/wrangler.toml`, which declares the `DB` D1 binding and the `kumiki`
+database name. The `database_id` must be correctly set before the Worker can access
+your database; the exact provisioning flow depends on Cloudflare's button setup at
+deploy time.
 
 ### Option C — Agent-native (set up from Claude Code)
 
-Add the Kumiki MCP server to your Claude Code config, then ask Claude:
+Claude Code can run the full backend setup from the terminal. Ask Claude:
 
-> "Set up a Kumiki A/B backend — scaffold the project, create the D1 database, and
-> deploy to Cloudflare Workers."
+> "Scaffold a Kumiki A/B backend with `npm create kumiki@latest ab`, create the D1
+> database with `wrangler d1 create kumiki`, update `wrangler.toml` with the returned
+> `database_id`, apply migrations with `wrangler d1 migrations apply kumiki --remote`,
+> then deploy with `wrangler deploy`."
 
-Claude operates every control route via MCP: create tests, update traffic splits,
-read results, apply the winning variant — no dashboard required.
+Claude runs these commands in the shell — this is terminal-based deployment, **not** the
+MCP server.
+
+Once deployed, add the Kumiki MCP server to your Claude Code config. **The MCP server
+operates tests only** — create sites and tests, set traffic splits, read results, apply
+the winning variant. It cannot deploy Workers or create D1 databases.
 
 ---
 
 ## Step 2 — Install the snippet
 
-After deploying you have a Worker URL (e.g. `https://kumiki-api.<subdomain>.workers.dev`)
+After deploying you have a Worker URL (e.g. `https://<your-worker>.workers.dev`)
 and a `SITE_ID` for the site you created.
 
 Choose the tier that fits your setup:
