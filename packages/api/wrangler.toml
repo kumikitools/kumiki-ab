@@ -13,3 +13,8 @@ binding = "DB"
 database_name = "kumiki"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
+
+# D4 webhook drain — fires every minute to flush the outbox. The `scheduled()`
+# handler in src/index.ts calls drainWebhooks(env) via ctx.waitUntil().
+[triggers]
+crons = ["* * * * *"]

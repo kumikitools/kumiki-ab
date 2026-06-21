@@ -16,12 +16,32 @@ export interface Variables {
   test: TestRow;
 }
 
-/** A row of the `site` table. */
+/** A row of the `site` table (including webhook config from migration 0003). */
 export interface SiteRow {
   id: string;
   name: string;
   api_key_hash: string;
   created_at: number;
+  webhook_url: string | null;
+  webhook_secret: string | null;
+  webhook_enabled: number;  // SQLite INTEGER: 0 = disabled, 1 = enabled
+  webhook_events: string;   // "all" | "conversions"
+}
+
+/** A row of the `webhook_delivery` outbox table (migration 0003). */
+export interface WebhookDeliveryRow {
+  id: string;
+  site_id: string;
+  payload: string;          // JSON: { siteId, deliveryId, events }
+  attempts: number;
+  next_attempt_at: number;  // epoch ms
+  created_at: number;       // epoch ms
+}
+
+/** `webhook_delivery` joined with its site's webhook config — used by the drain. */
+export interface DueDeliveryRow extends WebhookDeliveryRow {
+  webhook_url: string;
+  webhook_secret: string;
 }
 
 /** A row of the `test` table. */

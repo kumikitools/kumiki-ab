@@ -114,6 +114,54 @@ export const ApplyTestRequestSchema = z.object({
 export type ApplyTestRequest = z.infer<typeof ApplyTestRequestSchema>;
 
 /**
+ * Reject URLs that aren't HTTPS or that resolve to private/internal hosts.
+ * MVP-lite SSRF defence: the configurer is the account owner (§7, single-operator
+ * self-host), so this is documented defence-in-depth, not a hard security boundary.
+ */
+export function isWebhookUrlSafe(rawUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+
+  const host = url.hostname.toLowerCase();
+  if (host === "localhost") return false;
+  if (host.endsWith(".internal") || host.endsWith(".local")) return false;
+
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (ipv4) {
+    const [a, b, c, d] = ipv4.slice(1).map(Number);
+    void c; void d;
+    if (a === 127) return false;                        // 127.0.0.0/8 loopback
+    if (a === 10) return false;                         // 10.0.0.0/8 RFC1918
+    if (a === 172 && b >= 16 && b <= 31) return false; // 172.16.0.0/12 RFC1918
+    if (a === 192 && b === 168) return false;           // 192.168.0.0/16 RFC1918
+    if (a === 169 && b === 254) return false;           // 169.254.0.0/16 link-local
+  }
+
+  return true;
+}
+
+/** Body for `PUT /v1/sites/:id/webhook`. */
+export const SetWebhookRequestSchema = z.object({
+  url: z
+    .string()
+    .min(1)
+    .refine(isWebhookUrlSafe, {
+      message:
+        "url must be https:// and must not point to localhost, loopback, RFC1918, or link-local addresses",
+    }),
+  secret: z.string().min(16).optional(),
+  events: z.enum(["all", "conversions"]).optional(),
+  enabled: z.boolean().optional(),
+});
+
+export type SetWebhookRequest = z.infer<typeof SetWebhookRequestSchema>;
+
+/**
  * Parse + validate a JSON request body against a zod schema. On any failure
  * throws an `ApiError` (400 `invalid_body`) carrying flattened zod issues in
  * `details`. Routes call this instead of touching `c.req.json()` directly.

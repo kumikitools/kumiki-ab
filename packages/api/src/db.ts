@@ -1,9 +1,11 @@
 import type {
   ConversionRow,
+  DueDeliveryRow,
   ExposureRow,
   SiteRow,
   TestRow,
   VariantRow,
+  WebhookDeliveryRow,
 } from "./env";
 
 /**
@@ -209,6 +211,10 @@ export async function getTestsWithVariantsForSite(
  * beacon — or a key repeated within one batch — never double-counts. All
  * statements run in one `db.batch` transaction.
  *
+ * `extraStmts` lets the ingest route append the webhook outbox insert to the same
+ * batch so events + outbox row are written atomically (fail-open is preserved: if
+ * the batch throws, both events and outbox are dropped together).
+ *
  * Callers MUST treat a thrown error as fail-open (drop the events, return 2xx —
  * never block the page; the free-tier write ceiling errors hard, ARCH §6). This
  * helper does not swallow errors; the ingestion route owns that policy.
@@ -217,6 +223,7 @@ export async function insertEvents(
   db: D1Database,
   exposures: ExposureRow[],
   conversions: ConversionRow[],
+  extraStmts: D1PreparedStatement[] = [],
 ): Promise<void> {
   const stmts: D1PreparedStatement[] = [];
 
@@ -260,7 +267,101 @@ export async function insertEvents(
     }
   }
 
-  if (stmts.length > 0) await db.batch(stmts);
+  const all = [...stmts, ...extraStmts];
+  if (all.length > 0) await db.batch(all);
+}
+
+// ─── Webhook outbox helpers (migration 0003) ────────────────────────────────
+
+/** Upsert webhook config columns on a site (the four 0003 columns). */
+export async function setSiteWebhook(
+  db: D1Database,
+  siteId: string,
+  config: { url: string; secret: string; events: string; enabled: number },
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE site
+          SET webhook_url = ?, webhook_secret = ?, webhook_events = ?, webhook_enabled = ?
+        WHERE id = ?`,
+    )
+    .bind(config.url, config.secret, config.events, config.enabled, siteId)
+    .run();
+}
+
+/**
+ * Return a prepared statement that inserts one `webhook_delivery` outbox row.
+ * Returned (not awaited) so the ingest route can add it to the same `db.batch`
+ * as the event rows — keeping the outbox insert atomic with the event writes.
+ */
+export function insertWebhookDelivery(
+  db: D1Database,
+  row: WebhookDeliveryRow,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO webhook_delivery
+         (id, site_id, payload, attempts, next_attempt_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      row.id,
+      row.site_id,
+      row.payload,
+      row.attempts,
+      row.next_attempt_at,
+      row.created_at,
+    );
+}
+
+/**
+ * Fetch up to `limit` due outbox rows joined with their site's webhook config.
+ * The JOIN is intentional: it filters out rows whose site's webhook was disabled
+ * after queuing and avoids a per-row site lookup in the drain.
+ */
+export async function getDueDeliveries(
+  db: D1Database,
+  nowMs: number,
+  limit: number,
+): Promise<DueDeliveryRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT wd.*, s.webhook_url, s.webhook_secret
+         FROM webhook_delivery wd
+         JOIN site s ON s.id = wd.site_id
+        WHERE wd.next_attempt_at <= ? AND s.webhook_enabled = 1
+        ORDER BY wd.next_attempt_at ASC
+        LIMIT ?`,
+    )
+    .bind(nowMs, limit)
+    .all<DueDeliveryRow>();
+  return results;
+}
+
+/** Delete a delivered (or exhausted) outbox row. */
+export async function deleteWebhookDelivery(
+  db: D1Database,
+  id: string,
+): Promise<void> {
+  await db
+    .prepare("DELETE FROM webhook_delivery WHERE id = ?")
+    .bind(id)
+    .run();
+}
+
+/** Reschedule a failed outbox row: bump attempts + set next_attempt_at. */
+export async function rescheduleWebhookDelivery(
+  db: D1Database,
+  id: string,
+  attempts: number,
+  nextAt: number,
+): Promise<void> {
+  await db
+    .prepare(
+      "UPDATE webhook_delivery SET attempts = ?, next_attempt_at = ? WHERE id = ?",
+    )
+    .bind(attempts, nextAt, id)
+    .run();
 }
 
 /** Per-variant aggregate the results route (D2, §4) reads — one row per variant

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { EventBatchSchema, type KumikiEvent } from "@kumikitools/schema";
 import type { AppBindings, ConversionRow, ExposureRow } from "../env";
 import { ApiError } from "../errors";
-import { getSite, insertEvents } from "../db";
+import { getSite, insertEvents, insertWebhookDelivery } from "../db";
 import { validateJson } from "../validation";
 
 /**
@@ -84,8 +84,39 @@ ingest.post("/:siteId", async (c) => {
     }
 
     const { exposures, conversions } = toRows(siteId, batch.events);
-    await insertEvents(c.env.DB, exposures, conversions);
 
+    // Webhook outbox wiring (D4): if a webhook is enabled for this site, append
+    // one delivery row to the SAME batch as the event rows. Atomic with the event
+    // write: if the batch throws, both events and the outbox row are dropped
+    // together — preserving fail-open and never forwarding an unperisted event.
+    // At-least-once delivery: a retried beacon's events hit INSERT OR IGNORE
+    // (deduped) but still produce a new outbox row (new deliveryId). The payload
+    // carries each event's idempotency key so the receiver deduplicates.
+    const extraStmts: D1PreparedStatement[] = [];
+    if (site.webhook_enabled) {
+      const scope = site.webhook_events;
+      const webhookEvents =
+        scope === "conversions"
+          ? batch.events.filter((e) => e.type === "conversion")
+          : batch.events;
+
+      if (webhookEvents.length > 0) {
+        const deliveryId = crypto.randomUUID();
+        const now = Date.now();
+        extraStmts.push(
+          insertWebhookDelivery(c.env.DB, {
+            id: deliveryId,
+            site_id: siteId,
+            payload: JSON.stringify({ siteId, deliveryId, events: webhookEvents }),
+            attempts: 0,
+            next_attempt_at: now,
+            created_at: now,
+          }),
+        );
+      }
+    }
+
+    await insertEvents(c.env.DB, exposures, conversions, extraStmts);
     return c.json({ accepted: batch.events.length }, 202);
   } catch (err) {
     // Unknown site is a deliberate reject — let it become the 404 envelope.
