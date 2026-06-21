@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kumiki A/B — snippet demo</title>
+
+    <!--
+      Inline config = zero-flicker path. Define KUMIKI_CONFIG before the
+      snippet so variant assignment is synchronous, then load the snippet.
+      Open the console to see the GA4 exposure event on window.dataLayer.
+    -->
+    <script>
+      window.KUMIKI_CONFIG = {
+        antiFlickerTimeout: 4000,
+        tests: [
+          {
+            id: "hero-headline",
+            status: "running",
+            coverage: 1,
+            variants: [
+              { id: "control", weight: 1 },
+              {
+                id: "v1",
+                weight: 1,
+                changes: [
+                  { selector: "#headline", type: "text", value: "Variant B headline 🎉" },
+                  { selector: "#cta", type: "attr", value: { href: "/signup-b" } },
+                  { selector: "#cta", type: "style", value: { background: "#16a34a" } },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+    </script>
+    <script src="../dist/kumiki.min.js"></script>
+  </head>
+  <body>
+    <h1 id="headline">Control headline</h1>
+    <a id="cta" href="/signup-a" style="display:inline-block;padding:8px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px">Sign up</a>
+
+    <p style="margin-top:2rem;color:#666">
+      Reload a few times — your variant is sticky (stored in localStorage as
+      <code>_kumiki_vid</code>). Clear it to re-roll. Check
+      <code>window.dataLayer</code> in the console for the exposure event.
+    </p>
+  </body>
+</html>

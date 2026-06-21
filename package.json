@@ -1,0 +1,13 @@
+{
+  "name": "kumiki-ab",
+  "private": true,
+  "description": "Agent-native A/B testing. Free, self-hosted, MCP-first.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

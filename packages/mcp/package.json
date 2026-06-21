@@ -1,0 +1,32 @@
+{
+  "name": "@kumikitools/mcp",
+  "version": "0.0.0",
+  "description": "Kumiki A/B MCP server — wraps the control API so every route is callable from Claude Code (ARCHITECTURE.md §5). The control surface IS the MCP surface.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "kumiki-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@kumikitools/schema": "*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
