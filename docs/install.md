@@ -192,11 +192,32 @@ The load guard means the tag is safe on any page where the snippet has not loade
 
 ---
 
-### c) Declarative no-code goals — forthcoming
+### c) Declarative goals — no `track()` call needed
 
-> **Coming soon.** URL-visit, element-click, and form-submit goals that fire conversion
-> beacons without writing code are on the roadmap (goal authoring). For now, use
-> `window.KUMIKI.track` above.
+URL-visit, element-click, and form-submit goals fire conversion beacons **without any
+page code**. Author them once at the site level, and the snippet evaluates them and
+fires the beacon for you.
+
+Each goal is one of three types — `url`, `click`, or `form` — each with an `id` and an
+optional static `value`:
+
+```jsonc
+[
+  { "id": "thanks",  "type": "url",   "targeting": { /* same shape as test page targeting */ } },
+  { "id": "buy-btn", "type": "click", "selector": "#buy", "value": 4980 },
+  { "id": "lead",    "type": "form",  "selector": "#signup-form" }
+]
+```
+
+Save the set via the goals API or the MCP tool — both replace the whole goal set
+atomically and purge the delivery cache:
+
+- **API:** `PUT /v1/sites/:id/goals` with `{ "goals": [ … ] }` (read back with `GET`).
+- **MCP (agent-native):** the `kumiki_set_goals` tool.
+
+A point-and-click no-code UI for authoring these is still on the roadmap; for now use
+the API/MCP above. Use `window.KUMIKI.track` (§a) for conversions you'd rather confirm
+in code — e.g. server-verified purchases.
 
 ---
 
