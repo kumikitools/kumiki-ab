@@ -40,6 +40,24 @@ database name. The `database_id` must be correctly set before the Worker can acc
 your database; the exact provisioning flow depends on Cloudflare's button setup at
 deploy time.
 
+> **Apply D1 migrations.** Cloudflare provisions an *empty* database — it does **not**
+> run migrations automatically. The template's `deploy` script
+> (`npm run migrations:apply:remote && wrangler deploy`) applies them, so make sure
+> Workers Builds uses `npm run deploy` as its deploy command. If your endpoints return
+> `500 internal_error` after deploying, the tables are missing — apply migrations once
+> against your new repo:
+>
+> ```bash
+> git clone https://github.com/<you>/<your-new-repo> && cd <your-new-repo>
+> npm install
+> npx wrangler login
+> npx wrangler d1 migrations apply kumiki --remote
+> ```
+>
+> Sanity check: `GET https://<your-worker>.workers.dev/healthz` returns `{"ok":true}`
+> even before migrations (the Worker is up); the DB-backed routes (`/s.js?site=`,
+> `/v1/config/:siteId`) only work once migrations are applied.
+
 ### Option C — Agent-native (set up from Claude Code)
 
 Claude Code can run the full backend setup from the terminal. Ask Claude:
