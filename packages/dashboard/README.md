@@ -19,7 +19,7 @@ Full CRUD over one site's tests:
 
 > **F2 visual editor (shipped):** the **"Pick visually"** launcher under each
 > variant authors `changes[]` no-code by clicking the live page. It is a
-> **bookmarklet overlay**, not an iframe — many sites (incl. the storefront) send
+> **bookmarklet overlay**, not an iframe — many sites (incl. production storefronts) send
 > `X-Frame-Options`, so the picker is injected into the real page and posts the
 > changes back over `postMessage` (ARCH §9.6/§9.7, `@kumikitools/editor`). You can
 > still type `changes[]` as JSON in the textarea.

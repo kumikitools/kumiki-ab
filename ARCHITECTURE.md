@@ -1,7 +1,7 @@
 # Kumiki A/B — Phase 1 architecture & build plan
 
 > Status: draft for review (2026-06-14). Anchored on the config schema already
-> shipped in `packages/snippet/src/types.ts`. Strategy: `../../workspace/strategy.md` §3.3.
+> shipped in `packages/snippet/src/types.ts`. Strategy: internal design doc §3.3.
 
 This plan covers what remains after the client snippet: **config delivery,
 self-collected event ingestion, results (user-based Bayesian), the MCP server,
@@ -344,7 +344,7 @@ denominator sampling above some volume (keep all conversions).
 **Workers Paid ($5/mo min, 10M req/mo)** — *their* infra bill, not a kumiki gate,
 and ~20× cheaper than VWO/Optimizely (¥100k+/mo). Paid write overage is cheap:
 **D1 $1.00/M rows** (50M/mo included), **AE $0.25/M data points** (10M/mo
-included). For the storefront/a second storefront dogfood: $0–$5, negligible. Positioning line: *"runs free on Cloudflare's free tier for most
+included). For the dogfood storefront: $0–$5, negligible. Positioning line: *"runs free on Cloudflare's free tier for most
 sites; pennies on your own infra at scale; we never charge for a feature."*
 
 ---
@@ -373,7 +373,7 @@ sites; pennies on your own infra at scale; we never charge for a feature."*
 6. **Onboarding artifacts** — Deploy-to-Cloudflare button + `npm create kumiki`
    scaffold + the GTM install guide (in-head stub + Custom HTML tag + GA4-trigger
    conversion tag).
-7. **Dogfood on the storefront/a second storefront** — low-risk page, kill switch, fail-open verified;
+7. **Dogfood on the production storefront** — low-risk page, kill switch, fail-open verified;
    enable a webhook/GA4 emit to sanity-check counts. Try the GTM-shared-trigger
    conversion path against the storefront's existing GA4 setup.
 
@@ -396,7 +396,7 @@ snippet serves it → events collected → results read back) before the dashboa
    assignment + windowed conversion join); AE samples, which biases `pBest`
    exactly when samples are small (early in a test). AE's only real edges are at
    paid scale ($0.25/M vs D1 $1.00/M writes) and graceful sampling vs D1's hard
-   errors at the ceiling — neither matters while dogfooding the storefront/a second storefront at low
+   errors at the ceiling — neither matters while dogfooding at low
    volume. **Decision rule:** start D1-only (ingestion fails open at the ceiling,
    per §6); **trigger to add AE-raw + D1-rollups = a real site approaching
    ~80k writes/day**, at which point sampling correction (§9.8) becomes a
@@ -424,7 +424,7 @@ snippet serves it → events collected → results read back) before the dashboa
    ≠1). The delivered contract stays exactly `{ selector, type, value }` (§0, no
    second schema) — drift fingerprints live editor-side, not in the config.
    Unblocks F2.
-7. ~~the storefront/a second storefront CSP: can we allow framing for the iframe editor? (strategy §10 Q6)~~
+7. ~~Production-storefront CSP: can we allow framing for the iframe editor? (strategy §10 Q6)~~
    → **Resolved (2026-06-21): cannot rely on framing — F2 is a page-injected
    overlay (bookmarklet), not a dashboard iframe.** Verified 2026-06-21:
    **the storefront** (example.com) sends `X-Frame-Options: SAMEORIGIN` on every response →

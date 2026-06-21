@@ -1,7 +1,7 @@
 {
   "name": "@kumikitools/editor",
   "version": "0.0.0",
-  "description": "Kumiki A/B visual editor (F2) — a bookmarklet overlay that runs on the user's real page, picks elements, generates stability-ranked selectors, and posts the changes[] back to the dashboard. Not an iframe: many sites (incl. the storefront) send X-Frame-Options, so the picker is injected into the live page instead (ARCH §9.7).",
+  "description": "Kumiki A/B visual editor (F2) — a bookmarklet overlay that runs on the user's real page, picks elements, generates stability-ranked selectors, and posts the changes[] back to the dashboard. Not an iframe: many sites (incl. production storefronts) send X-Frame-Options, so the picker is injected into the live page instead (ARCH §9.7).",
   "license": "MIT",
   "private": true,
   "type": "module",

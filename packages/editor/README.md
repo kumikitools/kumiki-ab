@@ -7,7 +7,7 @@ your real page** instead of typing JSON. It feeds the exact same
 
 ## Why a bookmarklet, not an iframe (ARCH §9.7)
 
-Many sites — including our dogfood site **the storefront** — send
+Many sites — including production storefronts — send
 `X-Frame-Options: SAMEORIGIN`, so the dashboard **cannot** iframe the live page.
 So the picker is shipped as a **bookmarklet** that injects this bundle onto the
 real page (a browser extension is a later UX upgrade on the same code). This:

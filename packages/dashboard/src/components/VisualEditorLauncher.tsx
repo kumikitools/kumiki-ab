@@ -11,7 +11,7 @@ import {
 
 /**
  * The dashboard half of the F2 visual editor (ARCH §9.7, resolved 2026-06-21).
- * We do NOT iframe the target site — the storefront sends X-Frame-Options. Instead:
+ * We do NOT iframe the target site — many production sites send X-Frame-Options. Instead:
  *   1. mint a one-time session token,
  *   2. open the target page in a new tab (top-level nav, not blocked by XFO),
  *   3. the user clicks the Kumiki bookmarklet there → the overlay loads from

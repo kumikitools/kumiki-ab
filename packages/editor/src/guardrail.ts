@@ -1,5 +1,5 @@
 // Checkout / payment guardrail (ARCH §3 guardrails, lines ~186–188: "never touch
-// checkout/payment selectors"). the storefront/a second storefront are production storefronts — a variant
+// checkout/payment selectors"). Production storefronts are high-stakes — a variant
 // that mutates a price, a "Buy" button, or a card-input field is the one change
 // that can cost real money or break a purchase. The overlay REFUSES to pick such
 // elements (the snippet has no equivalent guard, so the editor must not author
