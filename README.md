@@ -15,9 +15,12 @@ npm create kumiki@latest ab
 
 # 2. Add the snippet to your site's <head>
 # <script src="https://<your-worker>.workers.dev/s.js?site=SITE_ID"></script>
+
+# 3. Mark conversions
+# window.KUMIKI.track('purchase', { value: 4980 })
 ```
 
-→ [Full install guide](docs/install.md) — CLI, Deploy-to-Cloudflare button, agent-native, and GTM (3-tier).
+→ [Full install guide](docs/install.md) — CLI, Deploy-to-Cloudflare button, agent-native, GTM (3-tier), and marking conversions (Step 3).
 
 ---
 

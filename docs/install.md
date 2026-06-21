@@ -125,7 +125,86 @@ for your experiment.
 
 ---
 
-## Conversions
+## Step 3 — Mark conversions
 
-Coming soon. Conversion tracking — declarative goals (URL match, click, form submit),
-`kumiki.track`, and GTM integration — is in active development.
+The snippet captures exposures automatically. To count a conversion, call
+`window.KUMIKI.track` on the goal event — directly in your page code, or from a GTM tag
+that reuses your existing GA4 trigger.
+
+---
+
+### a) JS API — `window.KUMIKI.track`
+
+```js
+if (window.KUMIKI && window.KUMIKI.track) {
+  window.KUMIKI.track('purchase', { value: 4980 });
+}
+```
+
+**Signature:** `window.KUMIKI.track(goal: string, opts?: { value?: number })`
+
+| Parameter | Description |
+|---|---|
+| `goal` | A label for the conversion (e.g. `'purchase'`, `'signup'`). Any string is valid. |
+| `value` | Optional revenue value (e.g. `4980` for ¥4,980). Omit if you do not track revenue. |
+
+Always wrap the call with `if (window.KUMIKI && window.KUMIKI.track)` — the snippet
+loads asynchronously and may not have run on every page.
+
+**Best for:** precise conversions confirmed server-side (order callbacks, payment
+success pages) or anywhere you need guaranteed call-time control.
+
+---
+
+### b) GTM conversion tag — reuse your existing GA4 trigger *(recommended combo)*
+
+**In-`<head>` snippet for exposure + GTM tag for conversion** is the best setup for
+teams already using GA4 via GTM: zero flicker on exposure, and conversions reuse
+tagging you already maintain — no new triggers, no engineering ticket.
+
+**Exposure (Step 2 Tier 1 — in `<head>`):**
+
+```html
+<script src="https://<your-worker>.workers.dev/s.js?site=SITE_ID"></script>
+```
+
+**Conversion — add this Custom HTML tag in GTM, bound to your existing GA4 purchase
+/ conversion trigger:**
+
+```html
+<script>
+  // Fires on your existing GA4 purchase / conversion trigger — no new trigger needed.
+  // Replace {{Purchase Value}} with a GTM Data Layer Variable for your revenue amount,
+  // or remove the `value` property if you do not track revenue.
+  if (window.KUMIKI && window.KUMIKI.track) {
+    window.KUMIKI.track('purchase', { value: {{Purchase Value}} });
+  }
+</script>
+```
+
+**To create the `{{Purchase Value}}` GTM variable:**
+
+1. GTM → Variables → New → **Data Layer Variable**.
+2. Data Layer Variable Name: `ecommerce.value` (adjust to match your push).
+3. Save as `Purchase Value`.
+
+The load guard means the tag is safe on any page where the snippet has not loaded.
+
+---
+
+### c) Declarative no-code goals — forthcoming
+
+> **Coming soon.** URL-visit, element-click, and form-submit goals that fire conversion
+> beacons without writing code are on the roadmap (goal authoring). For now, use
+> `window.KUMIKI.track` above.
+
+---
+
+## How results count conversions
+
+- **Variant-agnostic.** A conversion beacon carries a visitor ID and a goal label —
+  not a variant ID. The variant is resolved at read time.
+- **First-exposure attribution.** The variant a visitor was first assigned to is the
+  one credited, regardless of how many subsequent exposures they had.
+- **Conversion window.** Only conversions within W days of a visitor's first exposure
+  are counted (default: 7 days, configurable per test via `conversion_window_days`).
