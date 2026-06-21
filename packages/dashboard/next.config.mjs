@@ -7,3 +7,9 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+// OpenNext → Cloudflare (ARCH §6): make `getCloudflareContext()` and the
+// wrangler.jsonc `vars` available during `next dev`, so local dev mirrors the
+// deployed Worker. No-op for the production build/deploy path.
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();
