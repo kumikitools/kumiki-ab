@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Build shared packages first so their dist/ exists for dependents.
+      # schema must be built before snippet/editor/api/mcp (they import its dist).
+      # The dashboard's `next build` is intentionally excluded — it needs runtime
+      # env vars and would make CI flaky; its unit tests still run under `npm test`.
+      - name: Build packages
+        run: >-
+          npm run build
+          --workspace @kumikitools/schema
+          --workspace @kumikitools/snippet
+          --workspace @kumikitools/editor
+          --workspace @kumikitools/mcp
+          --workspace @kumikitools/api
+
+      - name: Test
+        run: npm test
