@@ -17,10 +17,12 @@ Full CRUD over one site's tests:
 - **Results** — the user-based, windowed beta-binomial summary (D2 / ARCH §4):
   exposed/converted, rate, P(best), 95% CI, and the posterior winner.
 
-> **Not in F1:** the iframe **visual editor** (F2) — the no-code way to author
-> `changes[]` by clicking the live page. It's blocked on two open decisions
-> (selector strategy §9.6, CSP/framing §9.7). Until then, `changes[]` is authored
-> as JSON in the variant editor. See `TASKS.md`.
+> **F2 visual editor (shipped):** the **"Pick visually"** launcher under each
+> variant authors `changes[]` no-code by clicking the live page. It is a
+> **bookmarklet overlay**, not an iframe — many sites (incl. the storefront) send
+> `X-Frame-Options`, so the picker is injected into the real page and posts the
+> changes back over `postMessage` (ARCH §9.6/§9.7, `@kumikitools/editor`). You can
+> still type `changes[]` as JSON in the textarea.
 
 ## Design
 
@@ -56,10 +58,25 @@ npm run typecheck -w @kumikitools/dashboard
 npm run build -w @kumikitools/dashboard
 ```
 
-## Deploy (Cloudflare Pages)
+## Deploy (Cloudflare, via OpenNext)
 
-Intended target is Cloudflare Pages (ARCH §6 — 100k SSR/day on the free tier).
-Because the app uses Server Components + server actions, deploy via the
-`@opennextjs/cloudflare` adapter (a follow-up wires the adapter + `wrangler.jsonc`).
-Set the three `KUMIKI_*` vars as Pages environment variables / secrets. Until the
-adapter is wired, `npm run start` after `npm run build` serves it from any Node host.
+The app uses Server Components + server actions, so it deploys as a **Cloudflare
+Worker with static assets** through the [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare)
+adapter (ARCH §6 — runs on the user's own free tier, same self-host model as the
+API Worker). Config: [`open-next.config.ts`](./open-next.config.ts) +
+[`wrangler.jsonc`](./wrangler.jsonc).
+
+```bash
+# one-time: set the write key as a secret (never put it in wrangler.jsonc)
+npx wrangler secret put KUMIKI_API_KEY
+
+# edit wrangler.jsonc `vars` for KUMIKI_API_URL + KUMIKI_SITE_ID, then:
+npm run preview -w @kumikitools/dashboard    # build + run the Worker locally
+npm run deploy  -w @kumikitools/dashboard    # build + deploy to your account
+```
+
+`KUMIKI_API_URL` and `KUMIKI_SITE_ID` are non-secret `vars` in `wrangler.jsonc`;
+`KUMIKI_API_KEY` is a **secret** (`wrangler secret put` or the dashboard Secrets
+UI) — it stays server-side (`src/lib/env.ts` reads all three from `process.env`,
+which OpenNext populates from the Worker env). `npm run start` after `npm run
+build` still serves it from any Node host if you prefer not to use Cloudflare.

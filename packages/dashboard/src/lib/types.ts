@@ -6,6 +6,7 @@
  * the request bodies the control routes accept.
  */
 import type {
+  Change,
   Results,
   Test,
   TestStatus,
@@ -13,7 +14,7 @@ import type {
   Variant,
 } from "@kumikitools/schema";
 
-export type { Results, Test, TestStatus, UrlTargeting, Variant };
+export type { Change, Results, Test, TestStatus, UrlTargeting, Variant };
 
 /**
  * The control-route test resource: the delivered-config `Test` plus the
