@@ -29,6 +29,7 @@ sites.post("/", async (c) => {
     webhook_secret: null,
     webhook_enabled: 0,
     webhook_events: "all",
+    goals: "[]", // DB default '[]' is what the INSERT stores; mirrored here for type safety.
   };
 
   await insertSite(c.env.DB, site);

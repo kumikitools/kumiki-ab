@@ -202,6 +202,21 @@ export async function getTestsWithVariantsForSite(
 }
 
 /**
+ * Replace a site's goal set (TASK-21). Single UPDATE; goals are a whole-set
+ * replace (no per-goal CRUD). `goalsJson` is the caller's `JSON.stringify(body.goals)`.
+ */
+export async function updateSiteGoals(
+  db: D1Database,
+  siteId: string,
+  goalsJson: string,
+): Promise<void> {
+  await db
+    .prepare("UPDATE site SET goals = ? WHERE id = ?")
+    .bind(goalsJson, siteId)
+    .run();
+}
+
+/**
  * Append a beacon's events to the event store (D1, ARCH §2b/§3b) — the ingestion
  * write helper, the equivalent of the control writes above but for the hot,
  * public write path.

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Goal } from "@kumikitools/schema";
 import type { AppBindings } from "../env";
 import { ApiError } from "../errors";
 import { getSite, getTestsWithVariantsForSite } from "../db";
@@ -34,7 +35,8 @@ async function loadConfig(db: D1Database, siteId: string, ingestUrl: string) {
     throw new ApiError(404, "site_not_found", `No site with id '${siteId}'`);
   }
   const rows = await getTestsWithVariantsForSite(db, siteId);
-  return serializeConfig(rows, { siteId, ingestUrl });
+  const goals = JSON.parse(site.goals) as Goal[];
+  return serializeConfig(rows, { siteId, ingestUrl, goals });
 }
 
 /** Re-tag a (possibly cached) response with the hit/miss marker on the way out. */

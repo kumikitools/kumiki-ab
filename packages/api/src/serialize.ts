@@ -1,5 +1,6 @@
 import type {
   Change,
+  Goal,
   KumikiConfig,
   Results,
   Test,
@@ -76,15 +77,16 @@ export function serializeTest(
  *
  * When `meta` is provided (D3+) the config self-describes for the beacon:
  * `siteId` + `ingestUrl` let the snippet address POST /v1/e/:siteId without
- * knowing the request origin; `goals` is [] until goal authoring lands (TASK-21).
+ * knowing the request origin; `goals` carries the stored site-level goals
+ * (TASK-21 — parsed from `site.goals` JSON by the caller).
  */
 export function serializeConfig(
   items: { test: TestRow; variants: VariantRow[] }[],
-  meta?: { siteId: string; ingestUrl: string },
+  meta?: { siteId: string; ingestUrl: string; goals: Goal[] },
 ): KumikiConfig {
   const tests = items.map(({ test, variants }) => toContractTest(test, variants));
   if (!meta) return { tests };
-  return { tests, siteId: meta.siteId, ingestUrl: meta.ingestUrl, goals: [] };
+  return { tests, siteId: meta.siteId, ingestUrl: meta.ingestUrl, goals: meta.goals };
 }
 
 /**

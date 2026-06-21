@@ -8,6 +8,7 @@ import { delivery } from "./routes/delivery";
 import { ingest } from "./routes/ingest";
 import { webhookRoutes } from "./routes/webhook";
 import { drainWebhooks } from "./webhook";
+import { siteGoals } from "./routes/site-goals";
 
 /**
  * The Kumiki A/B Worker (ARCHITECTURE.md §3) — one Worker, three surfaces:
@@ -36,6 +37,7 @@ app.route("/v1/e", ingest);
 // Control surface (§3c).
 app.route("/v1/sites", sites); //                           POST /v1/sites
 app.route("/v1/sites", tests); //   POST/GET /v1/sites/:id/tests  (create / list)
+app.route("/v1/sites", siteGoals); //    GET/PUT /v1/sites/:id/goals  (TASK-21)
 app.route("/v1/tests", testById); // GET/PATCH/PUT/POST /v1/tests/:id…  (B2–B6)
 app.route("/v1/sites", webhookRoutes); // GET/PUT/DELETE /v1/sites/:id/webhook (D4)
 
