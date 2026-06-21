@@ -1,0 +1,30 @@
+{
+  "name": "@kumikitools/dashboard",
+  "version": "0.0.0",
+  "description": "Kumiki A/B dashboard (F1) — Next.js 15 CRUD over the control API. Single-tenant self-host: points at your own Worker via env, server-side only (the write key never reaches the browser). The control surface IS the MCP surface IS this UI.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@kumikitools/schema": "*",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
