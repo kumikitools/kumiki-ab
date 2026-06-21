@@ -11,7 +11,8 @@
     "test": "vitest run",
     "dev": "wrangler dev",
     "migrations:apply:local": "wrangler d1 migrations apply kumiki --local",
-    "migrations:apply:remote": "wrangler d1 migrations apply kumiki --remote"
+    "migrations:apply:remote": "wrangler d1 migrations apply kumiki --remote",
+    "deploy": "npm run migrations:apply:remote && wrangler deploy"
   },
   "dependencies": {
     "@kumikitools/schema": "^0.1.0",
