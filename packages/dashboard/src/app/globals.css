@@ -307,3 +307,43 @@ table.results td.num {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* F2 visual-editor launcher (the "Pick visually" flow under each variant). */
+.kx-launcher {
+  margin-top: 6px;
+}
+.kx-launch-panel {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e4e4e7);
+  border-radius: 8px;
+  background: #fafafa;
+  font-size: 13px;
+}
+.kx-launch-panel ol {
+  margin: 0 0 4px;
+  padding-left: 18px;
+}
+.kx-launch-panel li {
+  margin: 4px 0;
+}
+.kx-launch-panel input[type="url"] {
+  min-width: 260px;
+}
+.kx-bookmarklet {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #4f46e5;
+  border-radius: 6px;
+  color: #4f46e5;
+  text-decoration: none;
+  cursor: grab;
+  font-weight: 600;
+}
+.kx-launch-status {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #3730a3;
+}

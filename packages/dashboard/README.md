@@ -17,10 +17,12 @@ Full CRUD over one site's tests:
 - **Results** — the user-based, windowed beta-binomial summary (D2 / ARCH §4):
   exposed/converted, rate, P(best), 95% CI, and the posterior winner.
 
-> **Not in F1:** the iframe **visual editor** (F2) — the no-code way to author
-> `changes[]` by clicking the live page. It's blocked on two open decisions
-> (selector strategy §9.6, CSP/framing §9.7). Until then, `changes[]` is authored
-> as JSON in the variant editor. See `TASKS.md`.
+> **F2 visual editor (shipped):** the **"Pick visually"** launcher under each
+> variant authors `changes[]` no-code by clicking the live page. It is a
+> **bookmarklet overlay**, not an iframe — many sites (incl. the storefront) send
+> `X-Frame-Options`, so the picker is injected into the real page and posts the
+> changes back over `postMessage` (ARCH §9.6/§9.7, `@kumikitools/editor`). You can
+> still type `changes[]` as JSON in the textarea.
 
 ## Design
 

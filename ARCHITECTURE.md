@@ -82,7 +82,8 @@ exactly this.** No second schema.
 | Config delivery + control API | Cloudflare Workers + Hono | `packages/api` |
 | Event ingestion + results | Workers + Analytics Engine / D1 | `packages/api` |
 | MCP server | TS MCP SDK, wraps the API | `packages/mcp` |
-| Dashboard + visual editor | Next.js 15 + iframe editor | `packages/dashboard` |
+| Dashboard | Next.js 15 (Workers via OpenNext) | `packages/dashboard` |
+| Visual editor (F2) | bookmarklet overlay IIFE (§9.7) | `packages/editor` |
 
 Monorepo via npm workspaces (already set up).
 
@@ -405,8 +406,45 @@ snippet serves it → events collected → results read back) before the dashboa
 4. Default conversion window W (7d e-commerce default?) and whether per-test
    override is MVP.
 5. Shared `packages/schema` now, or duplicate zod short-term?
-6. Visual-editor selector strategy (stable selector vs nth-child path).
-7. the storefront/a second storefront CSP: can we allow framing for the iframe editor? (strategy §10 Q6)
+6. ~~Visual-editor selector strategy (stable selector vs nth-child path).~~
+   → **Resolved (2026-06-21): stability-ranked hybrid, not a full nth-child
+   path.** When the user picks an element, generate the *shortest selector unique
+   on the captured page*, preferring in order: stable `id` → `data-*`/semantic
+   attribute → human-meaningful unique class → tag + combo scoped to the nearest
+   stable ancestor → **last resort** `:nth-of-type` anchored at that ancestor
+   (never a full path from `<html>`). Volatile tokens are skipped (numeric/hashed
+   ids, framework `:r0:`-style ids, hashed/CSS-module/utility classes). Reason:
+   pure stable-only can't target the many real elements that lack a stable hook;
+   a full nth-child path is brittle — any insertion/reorder above the target
+   silently breaks or mis-targets it (and `applyChange` mutates *every* match, so
+   a drifted selector is a live footgun). The hybrid is the industry standard
+   (Optimizely/VWO; the `finder` lib) and fits our fail-open ethos. Because the
+   editor runs on the *live* DOM (§9.7), the generated selector is verified to
+   resolve at authoring time, and match-count is shown at pick time (warn when
+   ≠1). The delivered contract stays exactly `{ selector, type, value }` (§0, no
+   second schema) — drift fingerprints live editor-side, not in the config.
+   Unblocks F2.
+7. ~~the storefront/a second storefront CSP: can we allow framing for the iframe editor? (strategy §10 Q6)~~
+   → **Resolved (2026-06-21): cannot rely on framing — F2 is a page-injected
+   overlay (bookmarklet), not a dashboard iframe.** Verified 2026-06-21:
+   **the storefront** (example.com) sends `X-Frame-Options: SAMEORIGIN` on every response →
+   the dashboard (a different origin) **cannot** iframe our flagship production
+   site. a second storefront (www.store.example.com) currently sends no framing header, but that's a
+   third-party policy that can change anytime. So a framed-iframe editor is a
+   non-starter as the primary surface. Instead the picker is an esbuild IIFE
+   (`packages/editor`) **injected into the real live page via a bookmarklet** (a
+   browser extension is a later UX upgrade on the same code): the dashboard
+   `window.open`s the target (top-level nav, not blocked by XFO), the user clicks
+   the bookmarklet, the overlay handshakes with `window.opener` and `postMessage`s
+   the generated `changes[]` back (origin + one-time session token checked both
+   ways). This sidesteps XFO/CSP permanently *and* edits the exact DOM the snippet
+   runs against (selectors verified in situ — see §9.6). Mirrors how
+   Optimizely/VWO/old Google Optimize all ship their visual editors. Fallback when
+   there's no opener: overlay offers "copy `changes` JSON" to paste into the F1
+   editor (fail-open). An optional framed *preview* may be kept for framable sites
+   (a second storefront) but is never required. Unblocks F2. (§1 components table + TASKS F2
+   updated to "bookmarklet overlay" to match.)
+
 8. Sampling policy: at what volume to sample exposures, and how to correct the
    posterior for the sampling rate.
 9. GTM anti-flicker stub: ship a separate ~3-line in-head stub snippet for the

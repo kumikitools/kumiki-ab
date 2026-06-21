@@ -1,15 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Variant } from "@/lib/types";
+import type { Change, Variant } from "@/lib/types";
+import { VisualEditorLauncher } from "@/components/VisualEditorLauncher";
 
 /**
  * Edits a test's `variants[]` and serialises them into a hidden field the form
  * action reads (`variantsJson`). Each variant is an id, a relative weight, and a
- * `changes[]` payload authored as JSON (the no-code visual authoring of `changes`
- * is the deferred F2 iframe editor — see TASKS.md). The API stays the authority
- * on shape; this island only assembles a valid JSON array and blocks submit while
- * the `changes` JSON is malformed, so the action never receives garbage.
+ * `changes[]` payload. `changes` can be authored two ways: typed as JSON in the
+ * textarea, or built no-code with the **F2 visual editor** (the "Pick visually"
+ * launcher) — which picks elements on the live page and writes the same JSON
+ * back here. The API stays the authority on shape; this island only assembles a
+ * valid JSON array and blocks submit while the `changes` JSON is malformed, so
+ * the action never receives garbage.
  */
 interface Editable {
   id: string;
@@ -99,6 +102,12 @@ export function VariantsEditor({
             spellCheck={false}
             placeholder='[{ "selector": "h1", "type": "text", "value": "New headline" }]'
           />
+          <VisualEditorLauncher
+            currentChanges={parseChanges(r.changesText)}
+            onApply={(changes) =>
+              update(i, { changesText: JSON.stringify(changes, null, 2) })
+            }
+          />
         </div>
       ))}
 
@@ -112,6 +121,16 @@ export function VariantsEditor({
       <input type="hidden" name={name} value={error ? "" : json} />
     </div>
   );
+}
+
+/** Best-effort parse of a row's changes JSON, for seeding the visual editor. */
+function parseChanges(text: string): Change[] {
+  try {
+    const v = JSON.parse(text || "[]");
+    return Array.isArray(v) ? (v as Change[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Build the `variants[]` JSON, or report the first malformed `changes` field. */
