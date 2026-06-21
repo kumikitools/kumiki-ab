@@ -30,10 +30,12 @@ wrangler deploy
 
 ### Option B — Deploy to Cloudflare button
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kumikitools/kumiki-ab/tree/main/packages/api)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kumikitools/kumiki-ab/tree/main/packages/create-kumiki/templates/ab)
 
-One click provisions the Worker + D1 in your Cloudflare account. Cloudflare reads
-`packages/api/wrangler.toml`, which declares the `DB` D1 binding and the `kumiki`
+One click provisions the Worker + D1 in your Cloudflare account. The button targets
+`packages/create-kumiki/templates/ab` — the self-contained backend template (the same
+one `npm create kumiki@latest` scaffolds), which builds in isolation. Cloudflare reads
+that template's `wrangler.toml`, which declares the `DB` D1 binding and the `kumiki`
 database name. The `database_id` must be correctly set before the Worker can access
 your database; the exact provisioning flow depends on Cloudflare's button setup at
 deploy time.

@@ -4,7 +4,7 @@
 
 Run experiments from Claude Code. Apply winning variants to 100% of traffic — no paywall, no SaaS bill.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kumikitools/kumiki-ab/tree/main/packages/api)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kumikitools/kumiki-ab/tree/main/packages/create-kumiki/templates/ab)
 
 ## Quickstart
 
