@@ -34,18 +34,18 @@ VWO, Optimizely, and Optimize Next all gate "winning variant → 100% rollout" b
 
 - **Win-pattern application — free.** Roll the winning variant to 100% of traffic with a single MCP call.
 - **MCP-first.** Every operation — create test, update traffic split, read results, apply winner — is callable from Claude Code. No dashboard required.
-- **Self-hosted on Cloudflare.** Your data stays in your own D1 database and Workers. Zero vendor lock-in.
+- **Self-hosted on Cloudflare.** Experiment data is self-collected into your own D1 — never pulled from a third party. You don't even need GA4 configured to run kumiki; if you have it, we emit events out to it. Zero vendor lock-in.
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
-| Snippet | Lightweight JS (`<head>`) — anti-flicker, sticky bucketing, fail-open, GA4 exposure events |
+| Snippet | Lightweight JS (`<head>`) — anti-flicker, sticky bucketing, fail-open, self-collected exposure/conversion events (emitted to GA4 too) |
 | API | Cloudflare Workers + Hono + D1 |
 | MCP server | Full REST coverage for Claude Code |
 | Dashboard | Next.js 15 + visual editor (iframe) |
 | Stats | Bayesian (beta-binomial) — peeking-resistant |
-| Analytics | GA4 Data API — no proprietary tracking |
+| Events | Self-collected store in your own D1 — user-based, windowed; emitted out to GA4/webhook, never pulled |
 
 ## Status
 
